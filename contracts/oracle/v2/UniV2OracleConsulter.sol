@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.9;
+pragma solidity ^0.8.9;
 
-import "@uniswap/lib/contracts/libraries/FixedPoint.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol";
-import "@uniswap/v2-periphery/contracts/libraries/UniswapV2OracleLibrary.sol";
 
-contract UniV2OracleLib {
+import "./UniV2CumulativePrices.sol";
+
+contract UniV2OracleConsulter {
     using FixedPoint for *;
 
     struct Observation {
@@ -42,21 +41,22 @@ contract UniV2OracleLib {
         granularity = _granularity;
     }
 
-    function observationIndexOf(uint256 timestamp) returns (uint8 index) {
+    function observationIndexOf(uint256 timestamp) public view returns (uint8 index) {
         uint256 epochPeriod = timestamp / periodSize;
         return uint8(epochPeriod % granularity);
     }
 
     function getFirstObervationInWindow()
-        returns (Observation storage firstObservation)
+        public
+        view
+        returns (uint8 firstObservationIndex)
     {
         uint8 currentObservationIndex = observationIndexOf(block.timestamp);
         unchecked {
-            uint8 firstObservationIndex = (currentObservationIndex + 1) %
+            firstObservationIndex = (currentObservationIndex + 1) %
                 granularity;
         }
 
-        firstObservation = pairObservations[firstObservationIndex];
     }
 
     function update() external {
@@ -73,7 +73,7 @@ contract UniV2OracleLib {
                 uint256 price0Cumulative,
                 uint256 price1Cumulative,
 
-            ) = UniswapV2OracleLibrary.currentCumulativePrices(pair);
+            ) = UniV2CumulativePrices.currentCumulativePrices(pair);
             observation.timestamp = block.timestamp;
             observation.price0Cumulative = price0Cumulative;
             observation.price1Cumulative = price1Cumulative;
@@ -84,7 +84,7 @@ contract UniV2OracleLib {
         uint256 priceCumulatitiveStart,
         uint256 priceCumulatitiveEnd,
         uint256 timeElapsed,
-        uint265 amountIn
+        uint256 amountIn
     ) private pure returns (uint256 amountOut) {
         unchecked {
             FixedPoint.uq112x112 memory priceAverage = FixedPoint.uq112x112(
@@ -93,19 +93,19 @@ contract UniV2OracleLib {
                         timeElapsed
                 )
             );
+            amountOut = priceAverage.mul(amountIn).decode144();
         }
 
-        amountOut = priceAverage.mul(amountIn).decode144();
     }
 
-    function consult(address tokenIn, uint256 amountIn) returns (uint256 amountOut) {
-        Observation storage observationStart = getFirstObervationInWindow();
+    function consult(address tokenIn, uint256 amountIn) public view returns (uint256 amountOut) {
+        Observation storage observationStart = pairObservations[getFirstObervationInWindow()];
 
         uint256 timeElapsed = block.timestamp - observationStart.timestamp;
         require(timeElapsed <= windowSize, "UniV2OracleLib: too soon to calculate twap");
         require(timeElapsed >= windowSize - periodSize * 2, "UniV2OracleLib: unexpected time elapsed");
 
-        (uint256 price0Cumulative, uint256 price0Cumulative, ) = UniswapV2OracleLibrary.currentCumulativePrices(pair);
+        (uint256 price0Cumulative, uint256 price1Cumulative, ) = UniV2CumulativePrices.currentCumulativePrices(pair);
         address token0 = IUniswapV2Pair(pair).token0();
 
         if (token0 == tokenIn) {

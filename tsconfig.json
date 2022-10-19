@@ -8,7 +8,7 @@
       "skipLibCheck": true,
       "paths": { "~/*": ["./src/*"] }
     },
-    "include": ["./deploy", "./scripts", "./tests", "./typechain-types"],
+    "include": ["./deploy", "./scripts", "./test", "./typechain-types"],
     "files": ["./hardhat.config.ts"],
   }
   

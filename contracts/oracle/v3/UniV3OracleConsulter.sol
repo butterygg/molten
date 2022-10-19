@@ -13,8 +13,8 @@ library UniV3OracleConsulter {
         address quoteToken;
     }
 
-    function consultPriceAtTick(PriceConsultancyParams memory _params)
-        internal
+    function consultPriceAtTick(PriceConsultancyParams calldata _params)
+        external
         view
         returns (uint256 twap)
     {

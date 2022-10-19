@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import '../../libraries/math/NewTickMath.sol';
+import '../../libraries/math/NewFullMath.sol';
 
 library UniV3OracleLib {
     function consult(address pool, uint32 secondsAgo)

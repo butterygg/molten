@@ -1,6 +1,11 @@
 # Files
 package-lock.json
+settings.json
 
 # Directories
+artifacts
+cache
+forge-cache
 node_modules
+out
 typechain
