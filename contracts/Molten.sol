@@ -101,16 +101,57 @@ abstract contract Molten is MoltenAccess, Mutex {
         totalStableDeposits = 0;
 
         oracleAdapter.update();
-        currentExchangeRate = oracleAdapter.consult(1);
+        currentExchangeRate = oracleAdapter.consult(10**IERC20Metadata(address(daoToken)).decimals());
+
+        uint256 daoTokenDecimals = IERC20Metadata(address(daoToken)).decimals();
+        uint256 stableTokenDecimals = IERC20Metadata(address(trustedStableToken)).decimals();
+
+        uint256 conversionNumerator;
+        if (daoTokenDecimals != stableTokenDecimals) {
+            conversionNumerator = calculateConversionNumerator(
+                IERC20Metadata(address(daoToken)).decimals(),
+                IERC20Metadata(address(trustedStableToken)).decimals(),
+                totalStableDepositsBefore
+            );
+        } else {
+            conversionNumerator = totalStableDepositsBefore;
+        }
 
         daoToken.transferFrom(
             msg.sender,
             address(this),
-            (totalStableDepositsBefore * premium) /
-                (currentExchangeRate * 10**premium_decimals)
+            ((conversionNumerator * premium) /
+                (currentExchangeRate * 10**premium_decimals))
         );
         trustedStableToken.transfer(msg.sender, totalStableDepositsBefore);
     }
+
+    function calculateConversionNumerator(
+        uint256 daoTokenDecimals,
+        uint256 stableTokenDecimals,
+        uint256 stableDepositsAmount
+    ) private pure returns (uint256 conversionNumerator) {
+        uint256 exchangeRateDecimalsDifference;
+
+        if (daoTokenDecimals > stableTokenDecimals) {
+            exchangeRateDecimalsDifference =
+                daoTokenDecimals -
+                stableTokenDecimals;
+
+            conversionNumerator =
+                stableDepositsAmount *
+                10**exchangeRateDecimalsDifference;
+        } else {
+            exchangeRateDecimalsDifference =
+                stableTokenDecimals -
+                daoTokenDecimals;
+
+            conversionNumerator =
+                stableDepositsAmount /
+                10**exchangeRateDecimalsDifference;
+        }
+    }
+
 
     function _approveToken(IERC20 _token, uint256 _amount)
         private
