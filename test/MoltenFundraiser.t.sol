@@ -53,10 +53,15 @@ contract MoltenFundraiserTest is MoltenFundraiserTestBase {
         moltenFundraiser.exchange(20);
     }
 
-    function testClaimBlocked() public {
+    function testClaimMTokensLocked() public {
         vm.expectRevert("Molten: exchange not happened");
         vm.prank(depositorAddress);
         moltenFundraiser.claimMTokens();
+    }
+
+    function testLiquidateBlocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        moltenFundraiser.liquidate();
     }
 }
 
@@ -146,9 +151,20 @@ contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
     function testMintsMTokens() public {
         assertEq(moltenFundraiser.totalSupply(), (1000 / 20) * 10**18);
     }
+
+    function testLiquidateTimeLocked() public {
+        vm.expectRevert("Molten: locked");
+        moltenFundraiser.liquidate();
+    }
+
+    function testClaimLocked() public {
+        vm.expectRevert("Molten: not liquidated");
+        vm.prank(depositorAddress);
+        moltenFundraiser.claim();
+    }
 }
 
-contract MoltenFundraiserClaimTest is MoltenFundraiserExchangeTestBase {
+contract MoltenFundraiserClaimMTokensTest is MoltenFundraiserExchangeTestBase {
     function setUp() public override {
         super.setUp();
 
@@ -160,7 +176,74 @@ contract MoltenFundraiserClaimTest is MoltenFundraiserExchangeTestBase {
         assertEq(moltenFundraiser.balanceOf(address(moltenFundraiser)), 0);
         assertEq(
             moltenFundraiser.balanceOf(depositorAddress),
-            (1000 / 20) * 10**18
+            (1000 / 20) * 10**18 // 50 * 10**18
         );
+    }
+
+    function testDepositorCanTransfer() public {
+        vm.prank(depositorAddress);
+        moltenFundraiser.transfer(address(0x4242), 50 * 10**18);
+    }
+}
+
+abstract contract MoltenFundraiserLiquidationTestBase is
+    MoltenFundraiserExchangeTestBase
+{
+    function setUp() public virtual override {
+        super.setUp();
+
+        vm.prank(depositorAddress);
+        moltenFundraiser.claimMTokens();
+        skip(365 days);
+        moltenFundraiser.liquidate();
+    }
+}
+
+contract MoltenFundraiserLiquidationTest is
+    MoltenFundraiserLiquidationTestBase
+{
+    function testPausesMToken() public {
+        vm.expectRevert("ERC20Pausable: token transfer while paused");
+        vm.prank(depositorAddress);
+        moltenFundraiser.transfer(address(0x4242), 50 * 10**18);
+    }
+
+    function testMakesTokensClaimable() public {
+        vm.prank(depositorAddress);
+        moltenFundraiser.claim();
+    }
+}
+
+contract MoltenFundraiserClaimTest is MoltenFundraiserLiquidationTestBase {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(depositorAddress);
+        moltenFundraiser.claim();
+    }
+
+    function testBurnsMTokens() public {
+        assertEq(moltenFundraiser.balanceOf(depositorAddress), 0);
+    }
+
+    function testTransfersDaoTokens() public {
+        assertEq(daoToken.balanceOf(depositorAddress), 50 * 10**18);
+    }
+}
+
+contract MoltenFundraiserLiquidationNoMTokensClaimTest is
+    MoltenFundraiserExchangeTestBase
+{
+    function setUp() public virtual override {
+        super.setUp();
+
+        skip(365 days);
+        moltenFundraiser.liquidate();
+        vm.prank(depositorAddress);
+        moltenFundraiser.claim();
+    }
+
+    function testStillTransfersDaoTokens() public {
+        assertEq(daoToken.balanceOf(depositorAddress), 50 * 10**18);
     }
 }
