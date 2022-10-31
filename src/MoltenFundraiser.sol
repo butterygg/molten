@@ -6,10 +6,21 @@ import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
+// [XXX] Add delegation
+// [XXX] Add refund
+// [XXX] Add basic voting on predefined proposal template
+// [XXX] Change functions visibility (and add tests)
+// [XXX] Move mToken out
+// [XXX] Add access control
+// [XXX] Check attack vectors and add counter measures (reentrancy mutex…)
+// [XXX] Add events
+
 contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
+    address public candidateAddress;
+
     uint256 public lockingDuration;
     uint256 public exchangeTime;
-    ERC20 public daoToken;
+    ERC20Votes public daoToken;
 
     IERC20 public depositToken;
     // ⚠️  This mapping is not emptied on exchange. After exchange, its values
@@ -37,8 +48,9 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         Pausable()
         ERC20Permit("mToken")
     {
+        candidateAddress = msg.sender;
         lockingDuration = _lockingDuration;
-        daoToken = ERC20(daoTokenAddress);
+        daoToken = ERC20Votes(daoTokenAddress);
         depositToken = IERC20(depositTokenAddress);
         daoTreasuryAddress = _daoTreasuryAddress;
     }
@@ -52,11 +64,15 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     }
 
     /**
-     * @param _exchangeRate is the number of deposit wei-tokens valued the same as 1
+     * @notice Delegates to candidate and swaps dao tokens for deposit tokens.
+     * ⚠️  Nothing resets delegation in this contract.
+     * @param _exchangeRate is the number of deposit wei-tokens valued the same as 1`
      * DAO token.
      */
     function exchange(uint256 _exchangeRate) public {
         require(exchangeTime == 0, "Molten: exchange happened");
+
+        daoToken.delegate(candidateAddress);
 
         exchangeTime = block.timestamp;
         exchangeRate = _exchangeRate;
@@ -81,6 +97,12 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         _transfer(address(this), msg.sender, _daoTokensBalance(msg.sender));
     }
 
+    /**
+     * @notice Sets the contract as liquidated, which allows claiming of DAO
+     * governance tokens by mToken holders.
+     * ⚠️  Does not reset delegation. After claiming their tokens, token holders
+     * need to change their delegation.
+     */
     function liquidate() public {
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(

@@ -2,20 +2,25 @@
 pragma solidity ^0.8.13;
 
 import {Test} from "forge-std/Test.sol";
-import {MoltenFundraiser} from "../src/MoltenFundraiser.sol";
 import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
+import {MoltenFundraiser} from "../src/MoltenFundraiser.sol";
+import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
+
 abstract contract MoltenFundraiserTestBase is Test {
-    ERC20PresetMinterPauser public daoToken;
+    ERC20VotesMintable public daoToken;
     MoltenFundraiser public moltenFundraiser;
     address public daoTreasuryAddress = address(0x1);
 
-    ERC20PresetMinterPauser public depositToken;
-    address public depositorAddress = address(0x2);
+    address public candidateAddress = address(0x2);
+
+    ERC20PresetMinterPauser public depositToken; // Used for minting.
+    address public depositorAddress = address(0x3);
 
     function setUp() public virtual {
-        daoToken = new ERC20PresetMinterPauser("DAO governance token", "GT");
+        daoToken = new ERC20VotesMintable("DAO governance token", "GT");
         depositToken = new ERC20PresetMinterPauser("Stable token", "BAI");
+        vm.prank(candidateAddress);
         moltenFundraiser = new MoltenFundraiser(
             address(daoToken),
             365 days,
@@ -161,6 +166,13 @@ contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
         vm.expectRevert("Molten: not liquidated");
         vm.prank(depositorAddress);
         moltenFundraiser.claim();
+    }
+
+    function testDelegatesToCandidate() public {
+        assertEq(
+            daoToken.delegates(address(moltenFundraiser)),
+            candidateAddress
+        );
     }
 }
 
