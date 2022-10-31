@@ -4,8 +4,9 @@ pragma solidity ^0.8.13;
 
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-contract MoltenFundraiser is ERC20Pausable {
+contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     uint256 public lockingDuration;
     uint256 public exchangeTime;
     ERC20 public daoToken;
@@ -34,6 +35,7 @@ contract MoltenFundraiser is ERC20Pausable {
         //     string.concat("m", daoToken.symbol())
         // )
         Pausable()
+        ERC20Permit("mToken")
     {
         lockingDuration = _lockingDuration;
         daoToken = ERC20(daoTokenAddress);
@@ -99,5 +101,35 @@ contract MoltenFundraiser is ERC20Pausable {
         _pause();
 
         daoToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override(ERC20, ERC20Pausable) {
+        ERC20Pausable._beforeTokenTransfer(from, to, amount);
+    }
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override(ERC20, ERC20Votes) {
+        ERC20Votes._afterTokenTransfer(from, to, amount);
+    }
+
+    function _mint(address account, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        ERC20Votes._mint(account, amount);
+    }
+
+    function _burn(address account, uint256 amount)
+        internal
+        override(ERC20, ERC20Votes)
+    {
+        ERC20Votes._burn(account, amount);
     }
 }
