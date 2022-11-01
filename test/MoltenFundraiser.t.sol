@@ -149,7 +149,7 @@ abstract contract MoltenFundraiserExchangeTestBase is MoltenFundraiserTestBase {
 }
 
 contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
-    function testSetExchangeTime() public {
+    function testSetExchangeTime() public view {
         assert(moltenFundraiser.exchangeTime() > 0);
     }
 
