@@ -6,12 +6,13 @@ import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-// [XXX] Add basic voting on predefined proposal template
 // [XXX] Change functions visibility (and add tests)
 // [XXX] Move mToken out
 // [XXX] Add access control
 
-// [TODO] Split: ERC20 // RefundEscrow
+// [TODO] Split: ERC20
+// [TODO] Split: RefundEscrow
+// [TODO] Split: Governor?
 // [TODO] Check attack vectors and add counter measures (reentrancy mutex…)
 // [TODO] Add best practices (events…)
 
@@ -33,6 +34,8 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     uint256 public exchangeRate;
 
     uint256 public liquidationTime;
+    mapping(address => bool) public votedForLiquidation;
+    uint256 public totalVotesForLiquidation;
 
     constructor(
         address daoTokenAddress,
@@ -115,12 +118,14 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
      * ⚠️  Does not reset delegation. After claiming their tokens, token holders
      * need to change their delegation.
      */
-    function liquidate() public {
+    function liquidate() public returns (bool) {
         require(exchangeTime > 0, "Molten: exchange not happened");
-        require(
-            block.timestamp >= exchangeTime + lockingDuration,
-            "Molten: locked"
-        );
+
+        bool lockEnded = block.timestamp >= exchangeTime + lockingDuration;
+        bool unanimousLiquidationVote = totalVotesForLiquidation ==
+            totalDeposited;
+
+        require(lockEnded || unanimousLiquidationVote, "Molten: locked");
 
         liquidationTime = block.timestamp;
 
@@ -165,5 +170,39 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         override(ERC20, ERC20Votes)
     {
         ERC20Votes._burn(account, amount);
+    }
+
+    function voteForForcedLiquidation() public returns (uint256) {
+        require(exchangeTime > 0, "Molten: exchange not happened");
+        require(
+            block.timestamp < exchangeTime + lockingDuration,
+            "Molten: not locked"
+        );
+
+        uint256 deposit = deposited[msg.sender];
+
+        if (deposit > 0) {
+            votedForLiquidation[msg.sender] = true;
+            totalVotesForLiquidation += deposit;
+        }
+
+        return deposit;
+    }
+
+    function withdrawVoteForForcedLiquidation() public returns (uint256) {
+        require(exchangeTime > 0, "Molten: exchange not happened");
+        require(
+            block.timestamp < exchangeTime + lockingDuration,
+            "Molten: not locked"
+        );
+
+        uint256 deposit = deposited[msg.sender];
+
+        if (deposit > 0) {
+            delete votedForLiquidation[msg.sender];
+            totalVotesForLiquidation -= deposit;
+        }
+
+        return deposit;
     }
 }
