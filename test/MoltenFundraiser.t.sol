@@ -68,6 +68,18 @@ contract MoltenFundraiserTest is MoltenFundraiserTestBase {
         vm.expectRevert("Molten: exchange not happened");
         moltenFundraiser.liquidate();
     }
+
+    function testVoteBlocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.voteForForcedLiquidation();
+    }
+
+    function testWithdrawVoteBlocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.withdrawVoteForForcedLiquidation();
+    }
 }
 
 contract MoltenFundraiserDepositTest is MoltenFundraiserTestBase {
@@ -243,6 +255,18 @@ contract MoltenFundraiserLiquidationTest is
         vm.prank(depositorAddress);
         moltenFundraiser.claim();
     }
+
+    function testVoteBlocked() public {
+        vm.expectRevert("Molten: not locked");
+        vm.prank(depositorAddress);
+        moltenFundraiser.voteForForcedLiquidation();
+    }
+
+    function testWithdrawVoteBlocked() public {
+        vm.expectRevert("Molten: not locked");
+        vm.prank(depositorAddress);
+        moltenFundraiser.withdrawVoteForForcedLiquidation();
+    }
 }
 
 contract MoltenFundraiserClaimTest is MoltenFundraiserLiquidationTestBase {
@@ -276,5 +300,37 @@ contract MoltenFundraiserLiquidationNoMTokensClaimTest is
 
     function testStillTransfersDaoTokens() public {
         assertEq(daoToken.balanceOf(depositorAddress), 50 * 10**18);
+    }
+}
+
+contract MoltenFundraiserVoteTest is MoltenFundraiserExchangeTestBase {
+    function setUp() public virtual override {
+        super.setUp();
+
+        vm.prank(depositorAddress);
+        moltenFundraiser.voteForForcedLiquidation();
+    }
+
+    function testUpdatesTotals() public {
+        assertEq(
+            moltenFundraiser.totalVotesForLiquidation(),
+            moltenFundraiser.totalDeposited()
+        );
+    }
+
+    function testEnablesLiquidation() public {
+        moltenFundraiser.liquidate();
+
+        vm.prank(depositorAddress);
+        moltenFundraiser.claim();
+    }
+
+    function testWithdrawDisablesLiquidation() public {
+        vm.prank(depositorAddress);
+        moltenFundraiser.withdrawVoteForForcedLiquidation();
+
+        assertEq(moltenFundraiser.totalVotesForLiquidation(), 0);
+        vm.expectRevert("Molten: locked");
+        moltenFundraiser.liquidate();
     }
 }
