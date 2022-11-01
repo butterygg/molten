@@ -6,14 +6,14 @@ import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-// [XXX] Add delegation
-// [XXX] Add refund
 // [XXX] Add basic voting on predefined proposal template
 // [XXX] Change functions visibility (and add tests)
 // [XXX] Move mToken out
 // [XXX] Add access control
-// [XXX] Check attack vectors and add counter measures (reentrancy mutex…)
-// [XXX] Add events
+
+// [TODO] Split: ERC20 // RefundEscrow
+// [TODO] Check attack vectors and add counter measures (reentrancy mutex…)
+// [TODO] Add best practices (events…)
 
 contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     address public candidateAddress;
@@ -61,6 +61,18 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         deposited[msg.sender] += amount;
         totalDeposited += amount;
         depositToken.transferFrom(msg.sender, address(this), amount);
+    }
+
+    function refund(uint256 amount) public {
+        require(exchangeTime == 0, "Molten: exchange happened");
+        require(
+            amount <= deposited[msg.sender],
+            "Molten: refund amount too large"
+        );
+
+        deposited[msg.sender] -= amount;
+        totalDeposited += amount;
+        depositToken.transfer(msg.sender, amount);
     }
 
     /**

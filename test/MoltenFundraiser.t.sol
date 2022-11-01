@@ -95,6 +95,19 @@ contract MoltenFundraiserDepositTest is MoltenFundraiserTestBase {
 
         assertEq(moltenFundraiser.totalDeposited(), 1234 * 10**18);
     }
+
+    function testAllowsRefund() public {
+        vm.prank(depositorAddress);
+        moltenFundraiser.refund(1000 * 10**18);
+
+        assertEq(moltenFundraiser.deposited(depositorAddress), 0);
+    }
+
+    function testBlocksTooLargeRefund() public {
+        vm.expectRevert("Molten: refund amount too large");
+        vm.prank(depositorAddress);
+        moltenFundraiser.refund(1001 * 10**18);
+    }
 }
 
 abstract contract MoltenFundraiserExchangeTestBase is MoltenFundraiserTestBase {
@@ -145,6 +158,12 @@ contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
         vm.expectRevert("Molten: exchange happened");
         vm.prank(depositorAddress);
         moltenFundraiser.deposit(1000);
+    }
+
+    function testRepeatedRefundFails() public {
+        vm.expectRevert("Molten: exchange happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.refund(1000);
     }
 
     function testRepeatedExchangeFails() public {
