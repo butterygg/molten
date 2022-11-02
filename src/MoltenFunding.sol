@@ -6,15 +6,12 @@ import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-// [XXX] Move mToken out
-
 // [TODO] Split: ERC20
 // [TODO] Split: RefundEscrow
-// [TODO] Split: Governor?
 // [TODO] Check attack vectors and add counter measures (reentrancy mutex…)
 // [TODO] Add best practices (events…)
 
-contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
+contract MoltenFunding is ERC20Pausable {
     address public candidateAddress;
 
     uint256 public lockingDuration;
@@ -46,7 +43,6 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         //     string.concat("m", daoToken.symbol())
         // )
         Pausable()
-        ERC20Permit("mToken")
     {
         candidateAddress = msg.sender;
         lockingDuration = _lockingDuration;
@@ -170,35 +166,5 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
 
         delete votedForLiquidation[msg.sender];
         totalVotesForLiquidation -= _deposited;
-    }
-
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override(ERC20, ERC20Pausable) {
-        ERC20Pausable._beforeTokenTransfer(from, to, amount);
-    }
-
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override(ERC20, ERC20Votes) {
-        ERC20Votes._afterTokenTransfer(from, to, amount);
-    }
-
-    function _mint(address account, uint256 amount)
-        internal
-        override(ERC20, ERC20Votes)
-    {
-        ERC20Votes._mint(account, amount);
-    }
-
-    function _burn(address account, uint256 amount)
-        internal
-        override(ERC20, ERC20Votes)
-    {
-        ERC20Votes._burn(account, amount);
     }
 }
