@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
 import {MoltenFunding} from "../src/MoltenFunding.sol";
+import {MToken} from "../src/MToken.sol";
 import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
 
 abstract contract MoltenFundingTestBase is Test {
@@ -17,6 +18,8 @@ abstract contract MoltenFundingTestBase is Test {
     ERC20PresetMinterPauser public depositToken; // Used for minting.
     address public depositorAddress = address(0x3);
 
+    MToken mToken;
+
     function setUp() public virtual {
         daoToken = new ERC20VotesMintable("DAO governance token", "GT");
         depositToken = new ERC20PresetMinterPauser("Stable token", "BAI");
@@ -27,6 +30,7 @@ abstract contract MoltenFundingTestBase is Test {
             address(depositToken),
             daoTreasuryAddress
         );
+        mToken = moltenFunding.mToken();
         vm.label(daoTreasuryAddress, "DAO treasury");
         vm.label(depositorAddress, "Depositor");
         vm.label(address(moltenFunding), "Molten fundraiser");
@@ -192,7 +196,7 @@ contract MoltenFundingExchangeTest is MoltenFundingExchangeTestBase {
     }
 
     function testMintsMTokens() public {
-        assertEq(moltenFunding.totalSupply(), (1000 / 20) * 10**18);
+        assertEq(mToken.totalSupply(), (1000 / 20) * 10**18);
     }
 
     function testLiquidateTimeLocked() public {
@@ -226,16 +230,16 @@ contract MoltenFundingClaimMTokensTest is MoltenFundingExchangeTestBase {
     }
 
     function testTransfersToDepositor() public {
-        assertEq(moltenFunding.balanceOf(address(moltenFunding)), 0);
+        assertEq(mToken.balanceOf(address(moltenFunding)), 0);
         assertEq(
-            moltenFunding.balanceOf(depositorAddress),
+            mToken.balanceOf(depositorAddress),
             (1000 / 20) * 10**18 // 50 * 10**18
         );
     }
 
     function testDepositorCanTransfer() public {
         vm.prank(depositorAddress);
-        moltenFunding.transfer(address(0x4242), 50 * 10**18);
+        mToken.transfer(address(0x4242), 50 * 10**18);
     }
 }
 
@@ -256,7 +260,7 @@ contract MoltenFundingLiquidationTest is MoltenFundingLiquidationTestBase {
     function testPausesMToken() public {
         vm.expectRevert("ERC20Pausable: token transfer while paused");
         vm.prank(depositorAddress);
-        moltenFunding.transfer(address(0x4242), 50 * 10**18);
+        mToken.transfer(address(0x4242), 50 * 10**18);
     }
 
     function testClaimingBlockedForNonDepositors() public {
@@ -291,7 +295,7 @@ contract MoltenFundingClaimTest is MoltenFundingLiquidationTestBase {
     }
 
     function testBurnsMTokens() public {
-        assertEq(moltenFunding.balanceOf(depositorAddress), 0);
+        assertEq(mToken.balanceOf(depositorAddress), 0);
     }
 
     function testTransfersDaoTokens() public {
