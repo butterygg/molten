@@ -144,7 +144,7 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         daoToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
     }
 
-    function voteForForcedLiquidation() external {
+    function voteForLiquidation() external {
         require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
@@ -158,7 +158,7 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         totalVotesForLiquidation += _deposited;
     }
 
-    function withdrawVoteForForcedLiquidation() external {
+    function withdrawVoteForLiquidation() external {
         require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
