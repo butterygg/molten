@@ -4,12 +4,12 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 import {ERC20PresetMinterPauser} from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
-import {MoltenFundraiser} from "../src/MoltenFundraiser.sol";
+import {MoltenFunding} from "../src/MoltenFunding.sol";
 import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
 
-abstract contract MoltenFundraiserTestBase is Test {
+abstract contract MoltenFundingTestBase is Test {
     ERC20VotesMintable public daoToken;
-    MoltenFundraiser public moltenFundraiser;
+    MoltenFunding public moltenFunding;
     address public daoTreasuryAddress = address(0x1);
 
     address public candidateAddress = address(0x2);
@@ -21,7 +21,7 @@ abstract contract MoltenFundraiserTestBase is Test {
         daoToken = new ERC20VotesMintable("DAO governance token", "GT");
         depositToken = new ERC20PresetMinterPauser("Stable token", "BAI");
         vm.prank(candidateAddress);
-        moltenFundraiser = new MoltenFundraiser(
+        moltenFunding = new MoltenFunding(
             address(daoToken),
             365 days,
             address(depositToken),
@@ -29,13 +29,13 @@ abstract contract MoltenFundraiserTestBase is Test {
         );
         vm.label(daoTreasuryAddress, "DAO treasury");
         vm.label(depositorAddress, "Depositor");
-        vm.label(address(moltenFundraiser), "Molten fundraiser");
+        vm.label(address(moltenFunding), "Molten fundraiser");
     }
 }
 
-contract MoltenFundraiserTest is MoltenFundraiserTestBase {
+contract MoltenFundingTest is MoltenFundingTestBase {
     function testConstructor() public {
-        assertEq(moltenFundraiser.lockingDuration(), 365 days);
+        assertEq(moltenFunding.lockingDuration(), 365 days);
     }
 
     function testDepositMissingFunds() public {
@@ -43,98 +43,98 @@ contract MoltenFundraiserTest is MoltenFundraiserTestBase {
 
         vm.expectRevert();
         vm.prank(depositorAddress);
-        moltenFundraiser.deposit(1000 * 10**18);
+        moltenFunding.deposit(1000 * 10**18);
     }
 
     function testExchangeMissingFunds() public {
         depositToken.mint(depositorAddress, 1000 * 10**18);
         vm.prank(depositorAddress);
-        depositToken.approve(address(moltenFundraiser), 1000 * 10**18);
+        depositToken.approve(address(moltenFunding), 1000 * 10**18);
         vm.prank(depositorAddress);
-        moltenFundraiser.deposit(1000 * 10**18);
+        moltenFunding.deposit(1000 * 10**18);
 
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.exchange(20);
+        moltenFunding.exchange(20);
     }
 
     function testLiquidateBlocked() public {
         vm.expectRevert("Molten: exchange not happened");
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
     }
 }
 
-abstract contract MoltenFundraiserDepositTestBase is MoltenFundraiserTestBase {
+abstract contract MoltenFundingDepositTestBase is MoltenFundingTestBase {
     function setUp() public virtual override {
         super.setUp();
 
         depositToken.mint(depositorAddress, 1000 * 10**18);
         vm.prank(depositorAddress);
-        depositToken.approve(address(moltenFundraiser), 1000 * 10**18);
+        depositToken.approve(address(moltenFunding), 1000 * 10**18);
 
         vm.prank(depositorAddress);
-        moltenFundraiser.deposit(1000 * 10**18);
+        moltenFunding.deposit(1000 * 10**18);
     }
 }
 
-contract MoltenFundraiserDepositTest is MoltenFundraiserDepositTestBase {
+contract MoltenFundingDepositTest is MoltenFundingDepositTestBase {
     function testRecordsDeposit() public {
-        assertEq(moltenFundraiser.deposited(depositorAddress), 1000 * 10**18);
+        assertEq(moltenFunding.deposited(depositorAddress), 1000 * 10**18);
     }
 
     function testIncreasesTotalDeposits() public {
         depositToken.mint(address(0x234), 234 * 10**18);
         vm.prank(address(0x234));
-        depositToken.approve(address(moltenFundraiser), 234 * 10**18);
+        depositToken.approve(address(moltenFunding), 234 * 10**18);
         vm.prank(address(0x234));
-        moltenFundraiser.deposit(234 * 10**18);
+        moltenFunding.deposit(234 * 10**18);
 
-        assertEq(moltenFundraiser.totalDeposited(), 1234 * 10**18);
+        assertEq(moltenFunding.totalDeposited(), 1234 * 10**18);
     }
 
     function testAllowsRefund() public {
         vm.prank(depositorAddress);
-        moltenFundraiser.refund(1000 * 10**18);
+        moltenFunding.refund(1000 * 10**18);
 
-        assertEq(moltenFundraiser.deposited(depositorAddress), 0);
+        assertEq(moltenFunding.deposited(depositorAddress), 0);
     }
 
     function testBlocksTooLargeRefund() public {
         vm.expectRevert("Molten: refund amount too large");
         vm.prank(depositorAddress);
-        moltenFundraiser.refund(1001 * 10**18);
+        moltenFunding.refund(1001 * 10**18);
     }
 
     function testClaimMTokensLocked() public {
         vm.expectRevert("Molten: exchange not happened");
         vm.prank(depositorAddress);
-        moltenFundraiser.claimMTokens();
+        moltenFunding.claimMTokens();
     }
 
     function testVoteBlocked() public {
         vm.expectRevert("Molten: exchange not happened");
         vm.prank(depositorAddress);
-        moltenFundraiser.voteForLiquidation();
+        moltenFunding.voteForLiquidation();
     }
 
     function testWithdrawVoteBlocked() public {
         vm.expectRevert("Molten: exchange not happened");
         vm.prank(depositorAddress);
-        moltenFundraiser.withdrawVoteForLiquidation();
+        moltenFunding.withdrawVoteForLiquidation();
     }
 
     function testExchangeBlockedForNonDAO() public {
         daoToken.mint(daoTreasuryAddress, 4242 * 10**18);
         vm.prank(daoTreasuryAddress);
-        daoToken.approve(address(moltenFundraiser), type(uint256).max);
+        daoToken.approve(address(moltenFunding), type(uint256).max);
 
         vm.expectRevert("Molten: exchange only by DAO");
-        moltenFundraiser.exchange(20);
+        moltenFunding.exchange(20);
     }
 }
 
-abstract contract MoltenFundraiserExchangeTestBase is
-    MoltenFundraiserDepositTestBase
+abstract contract MoltenFundingExchangeTestBase is
+    MoltenFundingDepositTestBase
 {
     uint256 public initialDaoTreasuryDepositBalance;
     uint256 public initialTotalDesposits;
@@ -144,28 +144,28 @@ abstract contract MoltenFundraiserExchangeTestBase is
 
         daoToken.mint(daoTreasuryAddress, 4242 * 10**18);
         vm.prank(daoTreasuryAddress);
-        daoToken.approve(address(moltenFundraiser), type(uint256).max);
+        daoToken.approve(address(moltenFunding), type(uint256).max);
 
         initialDaoTreasuryDepositBalance = depositToken.balanceOf(
             daoTreasuryAddress
         );
 
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.exchange(20);
+        moltenFunding.exchange(20);
     }
 }
 
-contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
+contract MoltenFundingExchangeTest is MoltenFundingExchangeTestBase {
     function testSetExchangeTime() public view {
-        assert(moltenFundraiser.exchangeTime() > 0);
+        assert(moltenFunding.exchangeTime() > 0);
     }
 
     function testTransfersDaoTokensToFundraiser() public {
-        assertEq(daoToken.balanceOf(address(moltenFundraiser)), 50 * 10**18);
+        assertEq(daoToken.balanceOf(address(moltenFunding)), 50 * 10**18);
     }
 
     function testTransfersDepositsToDaoTreasury() public {
-        assertEq(depositToken.balanceOf(address(moltenFundraiser)), 0);
+        assertEq(depositToken.balanceOf(address(moltenFunding)), 0);
         assertEq(
             depositToken.balanceOf(daoTreasuryAddress) -
                 initialDaoTreasuryDepositBalance,
@@ -176,123 +176,118 @@ contract MoltenFundraiserExchangeTest is MoltenFundraiserExchangeTestBase {
     function testRepeatedDepositFails() public {
         vm.expectRevert("Molten: exchange happened");
         vm.prank(depositorAddress);
-        moltenFundraiser.deposit(1000);
+        moltenFunding.deposit(1000);
     }
 
     function testRepeatedRefundFails() public {
         vm.expectRevert("Molten: exchange happened");
         vm.prank(depositorAddress);
-        moltenFundraiser.refund(1000);
+        moltenFunding.refund(1000);
     }
 
     function testRepeatedExchangeFails() public {
         vm.expectRevert("Molten: exchange happened");
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.exchange(20);
+        moltenFunding.exchange(20);
     }
 
     function testMintsMTokens() public {
-        assertEq(moltenFundraiser.totalSupply(), (1000 / 20) * 10**18);
+        assertEq(moltenFunding.totalSupply(), (1000 / 20) * 10**18);
     }
 
     function testLiquidateTimeLocked() public {
         vm.expectRevert("Molten: locked");
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
     }
 
     function testClaimLocked() public {
         vm.expectRevert("Molten: not liquidated");
         vm.prank(depositorAddress);
-        moltenFundraiser.claim();
+        moltenFunding.claim();
     }
 
     function testDelegatesToCandidate() public {
-        assertEq(
-            daoToken.delegates(address(moltenFundraiser)),
-            candidateAddress
-        );
+        assertEq(daoToken.delegates(address(moltenFunding)), candidateAddress);
     }
 
     function testClaimMTokensBlockedForNonDepositor() public {
         vm.expectRevert("Molten: no mToken to claim");
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.claimMTokens();
+        moltenFunding.claimMTokens();
     }
 }
 
-contract MoltenFundraiserClaimMTokensTest is MoltenFundraiserExchangeTestBase {
+contract MoltenFundingClaimMTokensTest is MoltenFundingExchangeTestBase {
     function setUp() public override {
         super.setUp();
 
         vm.prank(depositorAddress);
-        moltenFundraiser.claimMTokens();
+        moltenFunding.claimMTokens();
     }
 
     function testTransfersToDepositor() public {
-        assertEq(moltenFundraiser.balanceOf(address(moltenFundraiser)), 0);
+        assertEq(moltenFunding.balanceOf(address(moltenFunding)), 0);
         assertEq(
-            moltenFundraiser.balanceOf(depositorAddress),
+            moltenFunding.balanceOf(depositorAddress),
             (1000 / 20) * 10**18 // 50 * 10**18
         );
     }
 
     function testDepositorCanTransfer() public {
         vm.prank(depositorAddress);
-        moltenFundraiser.transfer(address(0x4242), 50 * 10**18);
+        moltenFunding.transfer(address(0x4242), 50 * 10**18);
     }
 }
 
-abstract contract MoltenFundraiserLiquidationTestBase is
-    MoltenFundraiserExchangeTestBase
+abstract contract MoltenFundingLiquidationTestBase is
+    MoltenFundingExchangeTestBase
 {
     function setUp() public virtual override {
         super.setUp();
 
         vm.prank(depositorAddress);
-        moltenFundraiser.claimMTokens();
+        moltenFunding.claimMTokens();
         skip(365 days);
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
     }
 }
 
-contract MoltenFundraiserLiquidationTest is
-    MoltenFundraiserLiquidationTestBase
-{
+contract MoltenFundingLiquidationTest is MoltenFundingLiquidationTestBase {
     function testPausesMToken() public {
         vm.expectRevert("ERC20Pausable: token transfer while paused");
         vm.prank(depositorAddress);
-        moltenFundraiser.transfer(address(0x4242), 50 * 10**18);
+        moltenFunding.transfer(address(0x4242), 50 * 10**18);
     }
 
     function testClaimingBlockedForNonDepositors() public {
         vm.expectRevert("Molten: nothing to claim");
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.claim();
+        moltenFunding.claim();
     }
 
     function testVoteBlocked() public {
         vm.expectRevert("Molten: not locked");
         vm.prank(depositorAddress);
-        moltenFundraiser.voteForLiquidation();
+        moltenFunding.voteForLiquidation();
     }
 
     function testWithdrawVoteBlocked() public {
         vm.expectRevert("Molten: not locked");
         vm.prank(depositorAddress);
-        moltenFundraiser.withdrawVoteForLiquidation();
+        moltenFunding.withdrawVoteForLiquidation();
     }
 }
 
-contract MoltenFundraiserClaimTest is MoltenFundraiserLiquidationTestBase {
+contract MoltenFundingClaimTest is MoltenFundingLiquidationTestBase {
     function setUp() public override {
         super.setUp();
 
         vm.prank(depositorAddress);
-        moltenFundraiser.claim();
+        moltenFunding.claim();
     }
 
     function testBurnsMTokens() public {
-        assertEq(moltenFundraiser.balanceOf(depositorAddress), 0);
+        assertEq(moltenFunding.balanceOf(depositorAddress), 0);
     }
 
     function testTransfersDaoTokens() public {
@@ -300,16 +295,16 @@ contract MoltenFundraiserClaimTest is MoltenFundraiserLiquidationTestBase {
     }
 }
 
-contract MoltenFundraiserLiquidationNoMTokensClaimTest is
-    MoltenFundraiserExchangeTestBase
+contract MoltenFundingLiquidationNoMTokensClaimTest is
+    MoltenFundingExchangeTestBase
 {
     function setUp() public virtual override {
         super.setUp();
 
         skip(365 days);
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
         vm.prank(depositorAddress);
-        moltenFundraiser.claim();
+        moltenFunding.claim();
     }
 
     function testStillTransfersDaoTokens() public {
@@ -319,44 +314,44 @@ contract MoltenFundraiserLiquidationNoMTokensClaimTest is
     function testVoteBlockedForNonDepositors() public {
         vm.expectRevert("Molten: no voting power");
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.voteForLiquidation();
+        moltenFunding.voteForLiquidation();
     }
 
     function testWithdrawVoteBlockedForNonDepositors() public {
         vm.expectRevert("Molten: no voting power");
         vm.prank(daoTreasuryAddress);
-        moltenFundraiser.withdrawVoteForLiquidation();
+        moltenFunding.withdrawVoteForLiquidation();
     }
 }
 
-contract MoltenFundraiserVoteTest is MoltenFundraiserExchangeTestBase {
+contract MoltenFundingVoteTest is MoltenFundingExchangeTestBase {
     function setUp() public virtual override {
         super.setUp();
 
         vm.prank(depositorAddress);
-        moltenFundraiser.voteForLiquidation();
+        moltenFunding.voteForLiquidation();
     }
 
     function testUpdatesTotals() public {
         assertEq(
-            moltenFundraiser.totalVotesForLiquidation(),
-            moltenFundraiser.totalDeposited()
+            moltenFunding.totalVotesForLiquidation(),
+            moltenFunding.totalDeposited()
         );
     }
 
     function testEnablesLiquidation() public {
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
 
         vm.prank(depositorAddress);
-        moltenFundraiser.claim();
+        moltenFunding.claim();
     }
 
     function testWithdrawDisablesLiquidation() public {
         vm.prank(depositorAddress);
-        moltenFundraiser.withdrawVoteForLiquidation();
+        moltenFunding.withdrawVoteForLiquidation();
 
-        assertEq(moltenFundraiser.totalVotesForLiquidation(), 0);
+        assertEq(moltenFunding.totalVotesForLiquidation(), 0);
         vm.expectRevert("Molten: locked");
-        moltenFundraiser.liquidate();
+        moltenFunding.liquidate();
     }
 }
