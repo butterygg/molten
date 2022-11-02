@@ -58,32 +58,14 @@ contract MoltenFundraiserTest is MoltenFundraiserTestBase {
         moltenFundraiser.exchange(20);
     }
 
-    function testClaimMTokensLocked() public {
-        vm.expectRevert("Molten: exchange not happened");
-        vm.prank(depositorAddress);
-        moltenFundraiser.claimMTokens();
-    }
-
     function testLiquidateBlocked() public {
         vm.expectRevert("Molten: exchange not happened");
         moltenFundraiser.liquidate();
     }
-
-    function testVoteBlocked() public {
-        vm.expectRevert("Molten: exchange not happened");
-        vm.prank(depositorAddress);
-        moltenFundraiser.voteForForcedLiquidation();
-    }
-
-    function testWithdrawVoteBlocked() public {
-        vm.expectRevert("Molten: exchange not happened");
-        vm.prank(depositorAddress);
-        moltenFundraiser.withdrawVoteForForcedLiquidation();
-    }
 }
 
-contract MoltenFundraiserDepositTest is MoltenFundraiserTestBase {
-    function setUp() public override {
+abstract contract MoltenFundraiserDepositTestBase is MoltenFundraiserTestBase {
+    function setUp() public virtual override {
         super.setUp();
 
         depositToken.mint(depositorAddress, 1000 * 10**18);
@@ -93,7 +75,9 @@ contract MoltenFundraiserDepositTest is MoltenFundraiserTestBase {
         vm.prank(depositorAddress);
         moltenFundraiser.deposit(1000 * 10**18);
     }
+}
 
+contract MoltenFundraiserDepositTest is MoltenFundraiserDepositTestBase {
     function testRecordsDeposit() public {
         assertEq(moltenFundraiser.deposited(depositorAddress), 1000 * 10**18);
     }
@@ -120,9 +104,34 @@ contract MoltenFundraiserDepositTest is MoltenFundraiserTestBase {
         vm.prank(depositorAddress);
         moltenFundraiser.refund(1001 * 10**18);
     }
+
+    function testClaimMTokensLocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.claimMTokens();
+    }
+
+    function testVoteBlocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.voteForForcedLiquidation();
+    }
+
+    function testWithdrawVoteBlocked() public {
+        vm.expectRevert("Molten: exchange not happened");
+        vm.prank(depositorAddress);
+        moltenFundraiser.withdrawVoteForForcedLiquidation();
+    }
+
+    function testExchangeBlockedForNonDAO() public {
+        // [XXX] Make a new base between DepositTest and ExchangeTestBase, then
+        // complete this test
+    }
 }
 
-abstract contract MoltenFundraiserExchangeTestBase is MoltenFundraiserTestBase {
+abstract contract MoltenFundraiserExchangeTestBase is
+    MoltenFundraiserDepositTestBase
+{
     uint256 public initialDaoTreasuryDepositBalance;
     uint256 public initialTotalDesposits;
 
@@ -133,16 +142,10 @@ abstract contract MoltenFundraiserExchangeTestBase is MoltenFundraiserTestBase {
         vm.prank(daoTreasuryAddress);
         daoToken.approve(address(moltenFundraiser), type(uint256).max);
 
-        depositToken.mint(depositorAddress, 1000 * 10**18);
-        vm.prank(depositorAddress);
-        depositToken.approve(address(moltenFundraiser), 1000 * 10**18);
-
         initialDaoTreasuryDepositBalance = depositToken.balanceOf(
             daoTreasuryAddress
         );
 
-        vm.prank(depositorAddress);
-        moltenFundraiser.deposit(1000 * 10**18);
         vm.prank(daoTreasuryAddress);
         moltenFundraiser.exchange(20);
     }

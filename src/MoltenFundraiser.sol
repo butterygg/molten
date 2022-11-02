@@ -6,9 +6,7 @@ import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-// [XXX] Add permissions
 // [XXX] Move mToken out
-// [XXX] Add access control
 
 // [TODO] Split: ERC20
 // [TODO] Split: RefundEscrow
@@ -84,10 +82,13 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
      * DAO token.
      */
     function exchange(uint256 _exchangeRate) external {
+        require(
+            msg.sender == daoTreasuryAddress,
+            "Molten: exchange only by DAO"
+        );
         require(exchangeTime == 0, "Molten: exchange happened");
 
         daoToken.delegate(candidateAddress);
-
         exchangeTime = block.timestamp;
         exchangeRate = _exchangeRate;
 
@@ -104,6 +105,7 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     }
 
     function claimMTokens() external {
+        require(deposited[msg.sender] > 0, "Molten: no mToken to claim");
         require(exchangeTime > 0, "Molten: exchange not happened");
 
         // [FIXME] We are not making sure that the total amount of claimable
@@ -132,6 +134,7 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
     }
 
     function claim() external {
+        require(deposited[msg.sender] > 0, "Molten: nothing to claim");
         require(liquidationTime > 0, "Molten: not liquidated");
 
         _unpause();
@@ -141,7 +144,8 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
         daoToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
     }
 
-    function voteForForcedLiquidation() external returns (uint256) {
+    function voteForForcedLiquidation() external {
+        require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
             block.timestamp < exchangeTime + lockingDuration,
@@ -150,15 +154,12 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
 
         uint256 _deposited = deposited[msg.sender];
 
-        if (_deposited > 0) {
-            votedForLiquidation[msg.sender] = true;
-            totalVotesForLiquidation += _deposited;
-        }
-
-        return _deposited;
+        votedForLiquidation[msg.sender] = true;
+        totalVotesForLiquidation += _deposited;
     }
 
-    function withdrawVoteForForcedLiquidation() external returns (uint256) {
+    function withdrawVoteForForcedLiquidation() external {
+        require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
             block.timestamp < exchangeTime + lockingDuration,
@@ -167,12 +168,8 @@ contract MoltenFundraiser is ERC20Pausable, ERC20Votes {
 
         uint256 _deposited = deposited[msg.sender];
 
-        if (_deposited > 0) {
-            delete votedForLiquidation[msg.sender];
-            totalVotesForLiquidation -= _deposited;
-        }
-
-        return _deposited;
+        delete votedForLiquidation[msg.sender];
+        totalVotesForLiquidation -= _deposited;
     }
 
     function _beforeTokenTransfer(
