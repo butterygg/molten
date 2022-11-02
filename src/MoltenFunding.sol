@@ -3,16 +3,12 @@
 pragma solidity ^0.8.13;
 
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
 import {MToken} from "./MToken.sol";
+import {Mutexed} from "./helpers/Mutexed.sol";
 
-// [TODO] Split: RefundEscrow
-// [TODO] Check attack vectors and add counter measures (reentrancy mutex…)
-// [TODO] Add best practices (events…)
-
-contract MoltenFunding {
+contract MoltenFunding is Mutexed {
     address public candidateAddress;
 
     MToken public mToken;
@@ -49,7 +45,8 @@ contract MoltenFunding {
 
         mToken = new MToken(
             string.concat("Molten ", daoToken.name()),
-            string.concat("m", daoToken.symbol())
+            string.concat("m", daoToken.symbol()),
+            address(this)
         );
     }
 
@@ -58,6 +55,7 @@ contract MoltenFunding {
 
         deposited[msg.sender] += amount;
         totalDeposited += amount;
+
         depositToken.transferFrom(msg.sender, address(this), amount);
     }
 
@@ -70,6 +68,7 @@ contract MoltenFunding {
 
         deposited[msg.sender] -= amount;
         totalDeposited += amount;
+
         depositToken.transfer(msg.sender, amount);
     }
 
@@ -79,23 +78,22 @@ contract MoltenFunding {
      * @param _exchangeRate is the number of deposit wei-tokens valued the same as 1`
      * DAO token.
      */
-    function exchange(uint256 _exchangeRate) external {
+    function exchange(uint256 _exchangeRate) external isNotLocked {
+        uint256 daoTokenTotal = totalDeposited / _exchangeRate;
+
         require(
             msg.sender == daoTreasuryAddress,
             "Molten: exchange only by DAO"
         );
         require(exchangeTime == 0, "Molten: exchange happened");
 
-        daoToken.delegate(candidateAddress);
         exchangeTime = block.timestamp;
         exchangeRate = _exchangeRate;
 
-        uint256 daoTokenTotal = totalDeposited / exchangeRate;
-
         mToken.mint(address(this), daoTokenTotal);
-
         depositToken.transfer(daoTreasuryAddress, totalDeposited);
         daoToken.transferFrom(msg.sender, address(this), daoTokenTotal);
+        daoToken.delegate(candidateAddress);
     }
 
     function _daoTokensBalance(address account) private view returns (uint256) {
@@ -120,18 +118,17 @@ contract MoltenFunding {
      * need to change their delegation.
      */
     function liquidate() external {
-        require(exchangeTime > 0, "Molten: exchange not happened");
-
         bool lockEnded = block.timestamp >= exchangeTime + lockingDuration;
         bool unanimousLiquidationVote = totalVotesForLiquidation ==
             totalDeposited;
 
+        require(exchangeTime > 0, "Molten: exchange not happened");
         require(lockEnded || unanimousLiquidationVote, "Molten: locked");
 
-        daoToken.delegate(address(0x00));
         liquidationTime = block.timestamp;
 
         mToken.pause();
+        daoToken.delegate(address(0x00));
     }
 
     function claim() external {
@@ -141,33 +138,32 @@ contract MoltenFunding {
         mToken.unpause();
         mToken.burn(msg.sender, mToken.balanceOf(msg.sender));
         mToken.pause();
-
         daoToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
     }
 
     function voteForLiquidation() external {
+        uint256 _deposited = deposited[msg.sender];
+
         require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
             block.timestamp < exchangeTime + lockingDuration,
             "Molten: not locked"
         );
-
-        uint256 _deposited = deposited[msg.sender];
 
         votedForLiquidation[msg.sender] = true;
         totalVotesForLiquidation += _deposited;
     }
 
     function withdrawVoteForLiquidation() external {
+        uint256 _deposited = deposited[msg.sender];
+
         require(deposited[msg.sender] > 0, "Molten: no voting power");
         require(exchangeTime > 0, "Molten: exchange not happened");
         require(
             block.timestamp < exchangeTime + lockingDuration,
             "Molten: not locked"
         );
-
-        uint256 _deposited = deposited[msg.sender];
 
         delete votedForLiquidation[msg.sender];
         totalVotesForLiquidation -= _deposited;
