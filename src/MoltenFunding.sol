@@ -3,16 +3,19 @@
 pragma solidity ^0.8.13;
 
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-// [TODO] Split: ERC20
+import {MToken} from "./MToken.sol";
+
 // [TODO] Split: RefundEscrow
 // [TODO] Check attack vectors and add counter measures (reentrancy mutex…)
 // [TODO] Add best practices (events…)
 
-contract MoltenFunding is ERC20Pausable {
+contract MoltenFunding {
     address public candidateAddress;
+
+    MToken public mToken;
 
     uint256 public lockingDuration;
     uint256 public exchangeTime;
@@ -37,18 +40,17 @@ contract MoltenFunding is ERC20Pausable {
         uint256 _lockingDuration,
         address depositTokenAddress,
         address _daoTreasuryAddress
-    )
-        ERC20("Molten token", "mToken") // ERC20(
-        //     string.concat("Molten ", daoToken.name()),
-        //     string.concat("m", daoToken.symbol())
-        // )
-        Pausable()
-    {
+    ) {
         candidateAddress = msg.sender;
         lockingDuration = _lockingDuration;
         daoToken = ERC20Votes(daoTokenAddress);
         depositToken = IERC20(depositTokenAddress);
         daoTreasuryAddress = _daoTreasuryAddress;
+
+        mToken = new MToken(
+            string.concat("Molten ", daoToken.name()),
+            string.concat("m", daoToken.symbol())
+        );
     }
 
     function deposit(uint256 amount) external {
@@ -90,7 +92,7 @@ contract MoltenFunding is ERC20Pausable {
 
         uint256 daoTokenTotal = totalDeposited / exchangeRate;
 
-        _mint(address(this), daoTokenTotal);
+        mToken.mint(address(this), daoTokenTotal);
 
         depositToken.transfer(daoTreasuryAddress, totalDeposited);
         daoToken.transferFrom(msg.sender, address(this), daoTokenTotal);
@@ -108,7 +110,7 @@ contract MoltenFunding is ERC20Pausable {
 
         // [FIXME] We are not making sure that the total amount of claimable
         // mTokens is going to match exactly the total minted supply.
-        _transfer(address(this), msg.sender, _daoTokensBalance(msg.sender));
+        mToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
     }
 
     /**
@@ -129,16 +131,16 @@ contract MoltenFunding is ERC20Pausable {
         daoToken.delegate(address(0x00));
         liquidationTime = block.timestamp;
 
-        _pause();
+        mToken.pause();
     }
 
     function claim() external {
         require(deposited[msg.sender] > 0, "Molten: nothing to claim");
         require(liquidationTime > 0, "Molten: not liquidated");
 
-        _unpause();
-        _burn(msg.sender, balanceOf(msg.sender));
-        _pause();
+        mToken.unpause();
+        mToken.burn(msg.sender, mToken.balanceOf(msg.sender));
+        mToken.pause();
 
         daoToken.transfer(msg.sender, _daoTokensBalance(msg.sender));
     }
