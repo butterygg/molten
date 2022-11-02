@@ -276,6 +276,10 @@ contract MoltenFundingLiquidationTest is MoltenFundingLiquidationTestBase {
         vm.prank(depositorAddress);
         moltenFunding.withdrawVoteForLiquidation();
     }
+
+    function testDelegatesToNull() public {
+        assertEq(daoToken.delegates(address(moltenFunding)), address(0x00));
+    }
 }
 
 contract MoltenFundingClaimTest is MoltenFundingLiquidationTestBase {

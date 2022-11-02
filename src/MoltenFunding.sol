@@ -89,7 +89,9 @@ contract MoltenFunding is ERC20Pausable {
         exchangeRate = _exchangeRate;
 
         uint256 daoTokenTotal = totalDeposited / exchangeRate;
+
         _mint(address(this), daoTokenTotal);
+
         depositToken.transfer(daoTreasuryAddress, totalDeposited);
         daoToken.transferFrom(msg.sender, address(this), daoTokenTotal);
     }
@@ -124,6 +126,7 @@ contract MoltenFunding is ERC20Pausable {
 
         require(lockEnded || unanimousLiquidationVote, "Molten: locked");
 
+        daoToken.delegate(address(0x00));
         liquidationTime = block.timestamp;
 
         _pause();
