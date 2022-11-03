@@ -43,7 +43,6 @@ Main parameters are:
 - Target DAO.
 - Limit on deposits.
 - Locking duration.
-- Discount on TWAP.
 
 
 ### Depositing
@@ -56,8 +55,8 @@ Depositing is allowed only until limit is reached and before exchange happens.
 
 ### Exchange
 
-`exchange`: the _DAO_ treasury gets deposits in exchange for its governance tokens at a discount on
-TWAP.
+`exchange`: the _DAO_ treasury gets deposits in exchange for its governance tokens. Ideally, the
+exchange rate given is at a discount on TWAP.
 
 TWAP is determined via an oracle.
 
