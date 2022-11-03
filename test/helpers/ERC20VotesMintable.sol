@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
+// solhint-disable no-empty-blocks
 pragma solidity ^0.8.13;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Votes, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {ERC20} from "openzeppelin/token/ERC20/ERC20.sol";
+import {ERC20Votes, ERC20Permit} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol";
 
 contract ERC20VotesMintable is ERC20Votes {
     constructor(string memory name, string memory symbol)

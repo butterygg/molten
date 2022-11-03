@@ -2,8 +2,8 @@
 // solhint-disable no-empty-blocks
 pragma solidity ^0.8.13;
 
-import {ERC20, ERC20Pausable, Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {Owned} from "solmate/src/auth/Owned.sol";
+import {ERC20, ERC20Pausable, Pausable} from "openzeppelin/token/ERC20/extensions/ERC20Pausable.sol";
+import {Owned} from "solmate/auth/Owned.sol";
 
 contract MToken is ERC20Pausable, Owned {
     constructor(
