@@ -81,3 +81,13 @@ forge build
 
 forge test
 ```
+
+**Note**: to test the oracle, you will need a **Ethereum Mainnet RPC** node address to run the forked network tests. Such as from [Infura](http://infura.io/).
+
+Once you have a mainnet RPC node url, set it to the `MAINNET_RPC_URL` variable in the `.env.example` file and rename the file to `.env`.
+
+If you would like to **omit the oracle tests** then instead of `forge test` run
+
+```bash
+forge test --no-match-contract Oracle  # or --nmc for short
+```
