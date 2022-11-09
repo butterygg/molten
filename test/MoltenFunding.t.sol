@@ -92,6 +92,23 @@ contract DepositTest is DepositTestBase {
     }
 }
 
+contract RefundTest is DepositTestBase {
+    function setUp() public override {
+        super.setUp();
+
+        vm.prank(depositorAddress);
+        moltenFunding.refund(800 * 10**18);
+    }
+
+    function testDecreasesDeposited() public {
+        assertEq(moltenFunding.deposited(depositorAddress), 200 * 10**18);
+    }
+
+    function testDecreasesTotalDeposited() public {
+        assertEq(moltenFunding.totalDeposited(), 200 * 10**18);
+    }
+}
+
 contract ExchangeTest is ExchangeTestBase {
     function testSetExchangeTime() public view {
         assert(moltenFunding.exchangeTime() > 0);
