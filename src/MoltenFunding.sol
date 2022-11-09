@@ -67,7 +67,7 @@ contract MoltenFunding is ReentrancyGuard {
         );
 
         deposited[msg.sender] -= amount;
-        totalDeposited += amount;
+        totalDeposited -= amount;
 
         depositToken.transfer(msg.sender, amount);
     }

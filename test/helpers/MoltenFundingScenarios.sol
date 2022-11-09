@@ -51,8 +51,6 @@ abstract contract DepositTestBase is MoltenFundingTestBase {
 }
 
 abstract contract ExchangeTestBase is DepositTestBase {
-    uint256 public initialTotalDesposits;
-
     function setUp() public virtual override {
         super.setUp();
 
