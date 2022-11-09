@@ -3,9 +3,9 @@
 pragma solidity ^0.8.13;
 
 import {IERC20} from "openzeppelin/token/ERC20/ERC20.sol";
-import {ERC20Votes} from "openzeppelin/token/ERC20/extensions/ERC20Votes.sol"; // [TODO] Use an interface.
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 
+import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 import {MToken} from "./MToken.sol";
 
 contract MoltenFunding is ReentrancyGuard {
@@ -13,7 +13,7 @@ contract MoltenFunding is ReentrancyGuard {
     address public daoTreasuryAddress;
     MToken public mToken;
     IERC20 public depositToken;
-    ERC20Votes public daoToken;
+    IERC20Votes public daoToken;
 
     // ⚠️  This mapping is not emptied on exchange. After exchange, its values
     // are really only what was deposited by a given address.
@@ -39,7 +39,7 @@ contract MoltenFunding is ReentrancyGuard {
     ) {
         candidateAddress = msg.sender;
         lockingDuration = _lockingDuration;
-        daoToken = ERC20Votes(daoTokenAddress);
+        daoToken = IERC20Votes(daoTokenAddress);
         depositToken = IERC20(depositTokenAddress);
         daoTreasuryAddress = _daoTreasuryAddress;
 
