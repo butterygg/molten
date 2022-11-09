@@ -18,7 +18,7 @@ contract MoltenFundingCreationTest is MoltenFundingTestBase {
         moltenFunding.deposit(1000 * 10**18);
     }
 
-    function testExchangeMissingFunds() public {
+    function testExchangeMissingDAOFunds() public {
         depositToken.mint(depositorAddress, 1000 * 10**18);
         vm.prank(depositorAddress);
         depositToken.approve(address(moltenFunding), 1000 * 10**18);
@@ -26,6 +26,12 @@ contract MoltenFundingCreationTest is MoltenFundingTestBase {
         moltenFunding.deposit(1000 * 10**18);
 
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
+        vm.prank(daoTreasuryAddress);
+        moltenFunding.exchange(20);
+    }
+
+    function testExchangeNoFunds() public {
+        vm.expectRevert("Molten: no deposits");
         vm.prank(daoTreasuryAddress);
         moltenFunding.exchange(20);
     }
