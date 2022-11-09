@@ -7,9 +7,25 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
+  NODE_VERSION: 16.17.0
 
 jobs:
-  check:
+  lint-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - name: Install
+        run: npm ci --include=dev
+      - name: Solhint check
+        run: npx solhint '{src,test}/**/*.sol'
+      - name: Prettier check
+        run: npx prettier --check .
+
+  forge-check:
     strategy:
       fail-fast: true
 

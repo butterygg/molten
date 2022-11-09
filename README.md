@@ -44,7 +44,6 @@ Main parameters are:
 - Limit on deposits.
 - Locking duration.
 
-
 ### Depositing
 
 Depositing is allowed only until limit is reached and before exchange happens.
@@ -74,7 +73,6 @@ Liquidation is freely executable once the locking period ended.
 Basically, **Buyers can redeem their mTokens for governance tokens once the lock ends**.
 
 Liquidation can be triggered before the end of the locking period only by unanimous votes.
-
 
 ## Setup
 
