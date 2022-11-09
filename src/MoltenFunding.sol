@@ -86,6 +86,7 @@ contract MoltenFunding is ReentrancyGuard {
             "Molten: exchange only by DAO"
         );
         require(exchangeTime == 0, "Molten: exchange happened");
+        require(totalDeposited > 0, "Molten: no deposits");
 
         exchangeTime = block.timestamp;
         exchangeRate = _exchangeRate;
