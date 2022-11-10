@@ -9,3 +9,12 @@ out/
 
 # Dotenv file
 .env
+
+# Vscode config files 
+.vscode
+
+# Hardhat files
+artifacts
+cache_hardhat
+node_modules
+typechain-types

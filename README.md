@@ -82,7 +82,7 @@ forge build
 forge test
 ```
 
-**Note**: to test the oracle, you will need a **Ethereum Mainnet RPC** node address to run the forked network tests. Such as from [Infura](http://infura.io/).
+**Note**: to test the oracle consulter, you will need a **Ethereum Mainnet RPC** node address to run the forked network tests. Such as from [Infura](http://infura.io/).
 
 Once you have a mainnet RPC node url, set it to the `MAINNET_RPC_URL` variable in the `.env.example` file and rename the file to `.env`.
 
@@ -90,4 +90,32 @@ If you would like to **omit the oracle tests** then instead of `forge test` run
 
 ```bash
 forge test --no-match-contract Oracle  # or --nmc for short
+```
+
+## The Oracle Consulter
+
+The Oracle Consulter queries Uniswap V3's pool data, which the consulter processes to get the Time Weighted Average Price of the `token0` in a pool in terms of `token1`. In the case of Molten, it provides a TWAP price of a Dao's token in terms of a given quote token.
+
+In other words, Uniswap V3 pools also acts as Oracles that provide price data to the Molten Oracle Consulter. Check out [Uniswap V3's docs](https://docs.uniswap.org/protocol/concepts/V3-overview/oracle) to learn more about this process.
+
+### Deploying the Oracle Consulter
+
+Ensure that you have set your `PRIVATE_KEY` in your local `.env` file to the private key of the network you'd like to deploy on.
+
+Set the `MAINNET_RPC_URL` variable with the rpc url for Ethereum mainnet within your `.env` as well.
+
+Then, run the `deployOracle.s.sol` script:
+
+```bash
+source .env
+forge script script/deployOracle.s.sol --rpc-url $MAINNET_RPC_URL --broadcast -vvvv
+```
+
+If you'd like to verify to etherscan add the `ETHERSCAN_API_KEY` variable name to your `.env` and set it to your Etherscan api key.
+
+Then run the script with the `--verify`:
+
+```bash
+source .env
+forge script script/deployOracle.s.sol --rpc-url $MAINNET_RPC_URL --broadcast --verify -vvvv
 ```
