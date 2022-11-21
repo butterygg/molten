@@ -27,13 +27,13 @@ contract MoltenFundingCreationTest is MoltenFundingTestBase {
 
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
         vm.prank(daoTreasuryAddress);
-        moltenFunding.exchange(20);
+        moltenFunding.exchange();
     }
 
     function testExchangeNoFunds() public {
         vm.expectRevert("Molten: no deposits");
         vm.prank(daoTreasuryAddress);
-        moltenFunding.exchange(20);
+        moltenFunding.exchange();
     }
 
     function testLiquidateBlocked() public {
@@ -94,7 +94,7 @@ contract DepositTest is DepositTestBase {
         daoToken.approve(address(moltenFunding), type(uint256).max);
 
         vm.expectRevert("Molten: exchange only by DAO");
-        moltenFunding.exchange(20);
+        moltenFunding.exchange();
     }
 }
 
@@ -120,7 +120,7 @@ contract ExchangeTest is ExchangeTestBase {
         assert(moltenFunding.exchangeTime() > 0);
     }
 
-    function testTransfersDaoTokensToFundraiser() public {
+    function testTransfersDaoTokensToContract() public {
         assertEq(daoToken.balanceOf(address(moltenFunding)), 50 * 10**18);
     }
 
@@ -144,7 +144,7 @@ contract ExchangeTest is ExchangeTestBase {
     function testRepeatedExchangeFails() public {
         vm.expectRevert("Molten: exchange happened");
         vm.prank(daoTreasuryAddress);
-        moltenFunding.exchange(20);
+        moltenFunding.exchange();
     }
 
     function testMintsMTokens() public {
@@ -184,6 +184,7 @@ contract ClaimMTokensTest is ExchangeTestBase {
     }
 
     function testDepositorCanTransfer() public {
+        emit log_uint(mToken.balanceOf(depositorAddress));
         vm.prank(depositorAddress);
         mToken.transfer(address(0x4242), 50 * 10**18);
     }
@@ -294,7 +295,7 @@ contract ClaimWhenUnclaimedMTokensAndMTokensBalancePositiveTest is
         daoToken.approve(address(moltenFunding), type(uint256).max);
 
         vm.prank(daoTreasuryAddress);
-        moltenFunding.exchange(20); // mTokens supply = 75.
+        moltenFunding.exchange(); // mTokens supply = 75.
 
         // 2nd depositor sends 10 mTokens to 1st depositor.
         vm.prank(depositorAddress2);

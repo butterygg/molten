@@ -5,33 +5,7 @@ pragma solidity ^0.8.13;
 import {Test} from "forge-std/Test.sol";
 
 import {UniswapV3Adapter} from "../src/UniswapV3Adapter.sol";
-
-contract OracleConsulterMock {
-    uint256 public returnValue;
-
-    constructor(uint256 _returnValue) {
-        returnValue = _returnValue;
-    }
-
-    function consult(
-        address,
-        uint32,
-        uint128,
-        address,
-        address
-    ) external view returns (uint256) {
-        return returnValue;
-    }
-
-    function consult(
-        address[] calldata,
-        address[] calldata,
-        uint32,
-        uint128
-    ) external view returns (uint256) {
-        return returnValue;
-    }
-}
+import {OracleConsulterMock} from "./helpers/UniswapV3OracleConsulterMock.sol";
 
 contract QuerierImplem is UniswapV3Adapter {
     constructor(
