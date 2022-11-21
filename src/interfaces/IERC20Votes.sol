@@ -8,5 +8,7 @@ interface IERC20Votes is IERC20 {
 
     function symbol() external view returns (string memory);
 
+    function decimals() external view returns (uint8);
+
     function delegate(address) external;
 }

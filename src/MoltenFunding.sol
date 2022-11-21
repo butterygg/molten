@@ -4,11 +4,13 @@ pragma solidity ^0.8.13;
 
 import {IERC20} from "openzeppelin/token/ERC20/ERC20.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {IUniswapV3OracleConsulter} from "molten-oracle/interfaces/IUniswapV3OracleConsulter.sol";
 
 import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 import {MToken} from "./MToken.sol";
+import {UniswapV3Adapter} from "./UniswapV3Adapter.sol";
 
-contract MoltenFunding is ReentrancyGuard {
+contract MoltenFunding is ReentrancyGuard, UniswapV3Adapter {
     address public candidateAddress;
     address public daoTreasuryAddress;
     MToken public mToken;
@@ -17,11 +19,12 @@ contract MoltenFunding is ReentrancyGuard {
 
     // ⚠️  This mapping is not emptied on exchange. After exchange, its values
     // are really only what was deposited by a given address.
-    mapping(address => uint256) public deposited;
+    mapping(address => uint128) public deposited;
     // ⚠️  Not emptied on exchange.
-    uint256 public totalDeposited;
+    uint128 public totalDeposited;
 
     uint256 public exchangeTime;
+    /// @notice number of dao wei-tokens valued at 1 dao token
     uint256 public exchangeRate;
     uint256 public lockingDuration;
 
@@ -35,8 +38,19 @@ contract MoltenFunding is ReentrancyGuard {
         address daoTokenAddress,
         uint256 _lockingDuration,
         address depositTokenAddress,
-        address _daoTreasuryAddress
-    ) {
+        address _daoTreasuryAddress,
+        address uniswapV3OracleAddress,
+        address[] memory _uniswapV3OraclePools,
+        address[] memory _uniswapV3OracleTokens,
+        uint32 _uniswapV3OraclePeriod
+    )
+        UniswapV3Adapter(
+            uniswapV3OracleAddress,
+            _uniswapV3OraclePools,
+            _uniswapV3OracleTokens,
+            _uniswapV3OraclePeriod
+        )
+    {
         candidateAddress = msg.sender;
         lockingDuration = _lockingDuration;
         daoToken = IERC20Votes(daoTokenAddress);
@@ -50,7 +64,7 @@ contract MoltenFunding is ReentrancyGuard {
         );
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint128 amount) external {
         require(exchangeTime == 0, "Molten: exchange happened");
 
         deposited[msg.sender] += amount;
@@ -59,7 +73,7 @@ contract MoltenFunding is ReentrancyGuard {
         depositToken.transferFrom(msg.sender, address(this), amount);
     }
 
-    function refund(uint256 amount) external {
+    function refund(uint128 amount) external {
         require(exchangeTime == 0, "Molten: exchange happened");
         require(
             amount <= deposited[msg.sender],
@@ -75,12 +89,8 @@ contract MoltenFunding is ReentrancyGuard {
     /**
      * @notice Delegates to candidate and swaps dao tokens for deposit tokens.
      * ⚠️  Nothing resets delegation in this contract.
-     * @param _exchangeRate is the number of deposit wei-tokens valued the same as 1`
-     * DAO token.
      */
-    function exchange(uint256 _exchangeRate) external nonReentrant {
-        uint256 daoTokenTotal = totalDeposited / _exchangeRate;
-
+    function exchange() external nonReentrant {
         require(
             msg.sender == daoTreasuryAddress,
             "Molten: exchange only by DAO"
@@ -89,22 +99,30 @@ contract MoltenFunding is ReentrancyGuard {
         require(totalDeposited > 0, "Molten: no deposits");
 
         exchangeTime = block.timestamp;
-        exchangeRate = _exchangeRate;
+        exchangeRate = queryExchangeRate(totalDeposited);
+        assert(exchangeRate < type(uint128).max);
 
-        mToken.mint(address(this), daoTokenTotal);
+        mToken.mint(
+            address(this),
+            (totalDeposited * 10**mToken.decimals()) / exchangeRate
+        );
         depositToken.transfer(daoTreasuryAddress, totalDeposited);
-        daoToken.transferFrom(msg.sender, address(this), daoTokenTotal);
+        daoToken.transferFrom(
+            msg.sender,
+            address(this),
+            (totalDeposited * 10**daoToken.decimals()) / exchangeRate
+        );
         daoToken.delegate(candidateAddress);
     }
 
-    function _claimableDaoTokenBalance(address account)
+    function _claimableMTokensBalance(address account)
         private
         view
         returns (uint256)
     {
         assert(exchangeRate > 0);
 
-        return deposited[account] / exchangeRate;
+        return (deposited[account] * 10**mToken.decimals()) / exchangeRate;
     }
 
     function claimMTokens() external {
@@ -115,7 +133,7 @@ contract MoltenFunding is ReentrancyGuard {
 
         // [FIXME] We are not making sure that the total amount of claimable
         // mTokens is going to match exactly the total minted supply.
-        mToken.transfer(msg.sender, _claimableDaoTokenBalance(msg.sender));
+        mToken.transfer(msg.sender, _claimableMTokensBalance(msg.sender));
     }
 
     /**
@@ -143,7 +161,7 @@ contract MoltenFunding is ReentrancyGuard {
         uint256 unclaimedMTokenBalance = (
             mTokensClaimed[msg.sender]
                 ? 0
-                : _claimableDaoTokenBalance(msg.sender)
+                : _claimableMTokensBalance(msg.sender)
         );
         uint256 claimableBalance = mTokenBalance + unclaimedMTokenBalance;
 
