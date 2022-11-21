@@ -100,7 +100,6 @@ contract MoltenFunding is ReentrancyGuard, UniswapV3Adapter {
 
         exchangeTime = block.timestamp;
         exchangeRate = queryExchangeRate(totalDeposited);
-        assert(exchangeRate < type(uint128).max);
 
         mToken.mint(
             address(this),
