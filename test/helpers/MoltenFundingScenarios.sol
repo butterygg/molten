@@ -25,25 +25,21 @@ abstract contract MoltenFundingTestBase is Test {
     MToken public mToken;
 
     function setUp() public virtual {
-        oracleConsulter = new OracleConsulterMock(20 * 10**18);
+        oracleConsulter = new OracleConsulterMock(20e18);
         daoToken = new ERC20VotesMintable("DAO governance token", "GT");
         depositToken = new ERC20PresetMinterPauser("Stable token", "BAI");
         vm.prank(candidateAddress);
-        address[] memory _one;
-        address[] memory _two;
         moltenFunding = new MoltenFunding(
             address(daoToken),
             365 days,
             address(depositToken),
             daoTreasuryAddress,
             address(oracleConsulter),
-            _one, // [XXX]
-            _two,
+            new address[](0),
+            new address[](0),
             1 days
         );
         mToken = moltenFunding.mToken();
-
-        // [XXX] First, simply mock the internal function from the mixin
 
         vm.label(daoTreasuryAddress, "DAO treasury");
         vm.label(depositorAddress, "Depositor");
@@ -56,12 +52,12 @@ abstract contract DepositTestBase is MoltenFundingTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        depositToken.mint(depositorAddress, 1000 * 10**18);
+        depositToken.mint(depositorAddress, 1000e18);
         vm.prank(depositorAddress);
-        depositToken.approve(address(moltenFunding), 1000 * 10**18);
+        depositToken.approve(address(moltenFunding), 1000e18);
 
         vm.prank(depositorAddress);
-        moltenFunding.deposit(1000 * 10**18);
+        moltenFunding.deposit(1000e18);
     }
 }
 
@@ -69,7 +65,7 @@ abstract contract ExchangeTestBase is DepositTestBase {
     function setUp() public virtual override {
         super.setUp();
 
-        daoToken.mint(daoTreasuryAddress, 4242 * 10**18);
+        daoToken.mint(daoTreasuryAddress, 4242e18);
         vm.prank(daoTreasuryAddress);
         daoToken.approve(address(moltenFunding), type(uint256).max);
 

@@ -33,9 +33,12 @@ contract UniswapV3AdapterTest is Test {
 
     function setUp() public {
         o = new OracleConsulterMock(20);
-        address[] memory _one; // [XXX]
-        address[] memory _two;
-        q = new QuerierImplem(address(o), _one, _two, 1 days);
+        q = new QuerierImplem(
+            address(o),
+            new address[](0),
+            new address[](0),
+            1 days
+        );
     }
 
     function testReturnsMockedConsultValue() public {
@@ -49,9 +52,12 @@ contract UniswapV3AdapterFailTest is Test {
 
     function setUp() public {
         o = new OracleConsulterMock(uint256(type(uint128).max) + 1);
-        address[] memory _one; // [XXX]
-        address[] memory _two;
-        q = new QuerierImplem(address(o), _one, _two, 1 days);
+        q = new QuerierImplem(
+            address(o),
+            new address[](0),
+            new address[](0),
+            1 days
+        );
     }
 
     function testRevertsIfConsultNotUint128() public {
