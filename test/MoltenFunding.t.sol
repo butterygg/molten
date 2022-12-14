@@ -430,4 +430,19 @@ contract VoteTest is ExchangeTestBase {
         vm.expectRevert("Molten: locked");
         moltenFunding.liquidate();
     }
+
+    function testCantDoubleVote() public {
+        vm.expectRevert("Molten: already voted");
+        vm.prank(depositorAddress);
+        moltenFunding.voteForLiquidation();
+    }
+
+    function testCantDoubleWithdraw() public {
+        vm.prank(depositorAddress);
+        moltenFunding.withdrawVoteForLiquidation();
+
+        vm.expectRevert("Molten: not voted");
+        vm.prank(depositorAddress);
+        moltenFunding.withdrawVoteForLiquidation();
+    }
 }
