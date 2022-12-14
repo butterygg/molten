@@ -127,6 +127,7 @@ contract MoltenFunding is ReentrancyGuard, UniswapV3Adapter {
     function claimMTokens() external {
         require(deposited[msg.sender] > 0, "Molten: no mToken to claim");
         require(exchangeTime > 0, "Molten: exchange not happened");
+        require(!mTokensClaimed[msg.sender], "Molten: mTokens already claimed");
 
         mTokensClaimed[msg.sender] = true;
 
