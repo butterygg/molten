@@ -196,6 +196,52 @@ contract ClaimMTokensTest is ExchangeTestBase {
     }
 }
 
+contract DoubleClaimMTokensTest is MoltenFundingTestBase {
+    address depositor2Address = address(0x301);
+
+    function setUp() public override {
+        super.setUp();
+
+        depositToken.mint(depositorAddress, 1000e18);
+        vm.prank(depositorAddress);
+        depositToken.approve(address(moltenFunding), 1000e18);
+        depositToken.mint(depositor2Address, 2000e18);
+        vm.prank(depositor2Address);
+        depositToken.approve(address(moltenFunding), 2000e18);
+
+        // Deposits
+        vm.prank(depositorAddress);
+        moltenFunding.deposit(1000e18);
+        vm.prank(depositor2Address);
+        moltenFunding.deposit(2000e18);
+
+        daoToken.mint(daoTreasuryAddress, 4242e18);
+        vm.prank(daoTreasuryAddress);
+        daoToken.approve(address(moltenFunding), type(uint256).max);
+
+        // Exchange
+        vm.prank(daoTreasuryAddress);
+        moltenFunding.exchange();
+    }
+
+    function testClaimsOK() public {
+        vm.prank(depositorAddress);
+        moltenFunding.claimMTokens();
+
+        vm.prank(depositor2Address);
+        moltenFunding.claimMTokens();
+    }
+
+    function testCantDoubleClaim() public {
+        vm.prank(depositorAddress);
+        moltenFunding.claimMTokens();
+
+        vm.expectRevert("Molten: mTokens already claimed");
+        vm.prank(depositorAddress);
+        moltenFunding.claimMTokens();
+    }
+}
+
 contract LiquidationTest is LiquidationTestBase {
     function testPausesMToken() public {
         vm.expectRevert("ERC20Pausable: token transfer while paused");
