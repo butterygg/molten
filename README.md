@@ -1,6 +1,6 @@
 # 🌋 Molten
 
-More details [here]()
+More details <a href="https://book.buttery.money/" target="_blank">here</a>.
 
 ## Molten funding contract
 
