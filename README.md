@@ -1,36 +1,6 @@
-# 🌋 Molten finance
+# 🌋 Molten
 
-Molten Finance is a solution for two problems faced by DAOs:
-
-1. Micro: DAO Financing or Governance Token Liquidity.
-2. Macro: Plutocracy, or rule by the wealthy leading to governance failure.
-
-## Summary
-
-### Rationale
-
-DAOs have taken on the difficult task of providing public goods without the financial flexibility
-enjoyed by governments and, even worse, have a structural exposure to being ruled by the wealthy.
-
-Left unaddressed, this represents a failure mode for DAOs, the effects of which could limit their
-ultimate success. Should a user believe a public good’s governance may be biased against them, they
-will limit their usage to avoid the costs they’ll incur should the rules be changed without their
-consent. Flooding DAO governance with people who only care about “number go up” guarantees your DAO
-will always choose to divert resources from things that support users to things that support token
-price.
-
-### Goals
-
-DAOs enjoy more liquidity, specifically at size, for its governance tokens.
-
-DAO governance is more inclusive and pluralistic, which leads to a reduction in the Gini
-coefficient.
-
-### Solution
-
-- A DAO in need of finances.
-- Minority constituencies within or outside of the DAO, whose preferences are underrepresented in DAO governance.
-- Potential DAO Delegates (Candidates), in need of voting power.
+More details [here]()
 
 ## Molten funding contract
 
