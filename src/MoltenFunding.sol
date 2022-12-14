@@ -184,6 +184,7 @@ contract MoltenFunding is ReentrancyGuard, UniswapV3Adapter {
             block.timestamp < exchangeTime + lockingDuration,
             "Molten: not locked"
         );
+        require(!votedForLiquidation[msg.sender], "Molten: already voted");
 
         votedForLiquidation[msg.sender] = true;
         totalVotesForLiquidation += _deposited;
@@ -198,6 +199,7 @@ contract MoltenFunding is ReentrancyGuard, UniswapV3Adapter {
             block.timestamp < exchangeTime + lockingDuration,
             "Molten: not locked"
         );
+        require(votedForLiquidation[msg.sender], "Molten: not voted");
 
         delete votedForLiquidation[msg.sender];
         totalVotesForLiquidation -= _deposited;
