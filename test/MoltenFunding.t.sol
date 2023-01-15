@@ -116,8 +116,8 @@ contract RefundTest is DepositTestBase {
 }
 
 contract ExchangeTest is ExchangeTestBase {
-    function testSetExchangeTime() public view {
-        assert(moltenFunding.exchangeTime() > 0);
+    function testSetExchangeTime() public {
+        assertTrue(moltenFunding.exchangeTime() > 0);
     }
 
     function testTransfersDaoTokensToContract() public {

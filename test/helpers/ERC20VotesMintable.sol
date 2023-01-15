@@ -24,3 +24,58 @@ contract ERC20VotesMintable is ERC20Votes {
         _mint(to, amount);
     }
 }
+
+contract ERC20VotesMintableMock is ERC20Votes {
+    struct TransferFromCall {
+        address from;
+        address to;
+        uint256 amount;
+    }
+    TransferFromCall public transferFromCalledWith;
+
+    constructor(string memory name, string memory symbol)
+        ERC20(name, symbol)
+        ERC20Permit("daoToken")
+    {}
+
+    function mint(address to, uint256 amount) public virtual {
+        _mint(to, amount);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override returns (bool) {
+        transferFromCalledWith = TransferFromCall({from: from, to: to, amount: amount});
+        return true;
+    }
+}
+
+contract ERC20VotesMintableFailedMock is ERC20Votes {
+    struct TransferFromCall {
+        address from;
+        address to;
+        uint256 amount;
+    }
+    TransferFromCall public transferFromCalledWith;
+
+    constructor(string memory name, string memory symbol)
+        ERC20(name, symbol)
+        ERC20Permit("daoToken")
+    {}
+
+    function mint(address to, uint256 amount) public virtual {
+        _mint(to, amount);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public override returns (bool) {
+        transferFromCalledWith = TransferFromCall({from: from, to: to, amount: amount});
+        require(false, "ERC20VotesMintableFailedMock transferFrom");
+        return true;
+    }
+}
