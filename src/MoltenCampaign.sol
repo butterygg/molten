@@ -10,7 +10,7 @@ contract MoltenCampaignMarket {
     // Threshold in daoToken-weis.
     uint256 public threshold;
 
-    constructor (address daoTokenAddress, uint256 _threshold) {
+    constructor(address daoTokenAddress, uint256 _threshold) {
         daoToken = IERC20Votes(daoTokenAddress);
         threshold = _threshold;
     }
@@ -19,11 +19,11 @@ contract MoltenCampaignMarket {
 contract MoltenCampaign {
     address public representative;
     MoltenCampaignMarket public market;
-    
+
     uint256 public totalDeposited;
     mapping(address => uint256) public deposited;
 
-    constructor (address marketAddress) {
+    constructor(address marketAddress) {
         representative = msg.sender;
         market = MoltenCampaignMarket(marketAddress);
     }
@@ -32,14 +32,14 @@ contract MoltenCampaign {
         return IERC20Votes(market.daoToken());
     }
 
-    function deposit (uint256 amount) public {
+    function deposit(uint256 amount) public {
         deposited[msg.sender] += amount;
         totalDeposited += amount;
 
         _getDaoToken().transferFrom(msg.sender, address(this), amount);
     }
-    
-    function refund () public {
+
+    function refund() public {
         uint256 _deposited = deposited[msg.sender];
 
         deposited[msg.sender] = 0;

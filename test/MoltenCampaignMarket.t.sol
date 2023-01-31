@@ -14,13 +14,19 @@ contract CreationTest is Test {
     }
 
     function testHasDaoToken() public {
-        MoltenCampaignMarket mcm = new MoltenCampaignMarket(address(daoToken), 1);
+        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
+            address(daoToken),
+            1
+        );
 
         assertEq(address(mcm.daoToken()), address(daoToken));
     }
 
     function testHasThreshold(uint256 threshold) public {
-        MoltenCampaignMarket mcm = new MoltenCampaignMarket(address(daoToken), threshold);
+        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
+            address(daoToken),
+            threshold
+        );
 
         assertEq(mcm.threshold(), threshold);
     }
