@@ -69,107 +69,107 @@ abstract contract TestBaseFailing is Test {
     }
 }
 
-contract DepositTest is TestBase {
-    address public depositor;
-    address public depositor2;
+contract StakeTest is TestBase {
+    address public staker;
+    address public staker2;
 
     function setUp() public override {
         super.setUp();
 
-        depositor = address(0x331);
-        depositor2 = address(0x332);
+        staker = address(0x331);
+        staker2 = address(0x332);
     }
 
-    function testSuccessfulDepositUpdatesDeposited() public {
-        vm.prank(depositor);
-        mc.deposit(333);
+    function testSuccessfulStakeUpdatesStaked() public {
+        vm.prank(staker);
+        mc.stake(333);
 
-        assertEq(mc.deposited(depositor), 333);
+        assertEq(mc.staked(staker), 333);
     }
 
-    function testSuccessfulDepositsUpdatesTotalDeposited() public {
-        vm.prank(depositor);
-        mc.deposit(333);
+    function testSuccessfulStakesUpdatesTotalStaked() public {
+        vm.prank(staker);
+        mc.stake(333);
 
-        vm.prank(depositor2);
-        mc.deposit(222);
+        vm.prank(staker2);
+        mc.stake(222);
 
-        assertEq(mc.totalDeposited(), 555);
+        assertEq(mc.totalStaked(), 555);
     }
 
-    function testSuccessfulDepositCallsTransfer() public {
-        vm.prank(depositor);
-        mc.deposit(333);
+    function testSuccessfulStakeCallsTransfer() public {
+        vm.prank(staker);
+        mc.stake(333);
 
         (address from, address to, uint256 amount) = daoToken
             .transferFromCalledWith();
-        assertEq(from, depositor);
+        assertEq(from, staker);
         assertEq(to, address(mc));
         assertEq(amount, 333);
     }
 }
 
-contract DepositFailTest is TestBaseFailing {
-    address public depositor;
-    address public depositor2;
+contract StakeFailTest is TestBaseFailing {
+    address public staker;
+    address public staker2;
 
     function setUp() public override {
         super.setUp();
 
-        depositor = address(0x331);
-        depositor2 = address(0x332);
+        staker = address(0x331);
+        staker2 = address(0x332);
     }
 
-    function testUnsuccessfulDepositDoesntUpdate() public {
-        vm.prank(depositor);
+    function testUnsuccessfulStakeDoesntUpdate() public {
+        vm.prank(staker);
         vm.expectRevert("ERC20VMFM transferFrom");
-        mc.deposit(333);
+        mc.stake(333);
 
-        assertEq(mc.deposited(depositor), 0);
-        assertEq(mc.totalDeposited(), 0);
+        assertEq(mc.staked(staker), 0);
+        assertEq(mc.totalStaked(), 0);
     }
 }
 
-contract RefundTest is TestBase {
-    address public depositor;
-    address public depositor2;
+contract UnstakeTest is TestBase {
+    address public staker;
+    address public staker2;
 
     function setUp() public override {
         super.setUp();
 
-        depositor = address(0x331);
-        depositor2 = address(0x332);
+        staker = address(0x331);
+        staker2 = address(0x332);
 
-        vm.prank(depositor);
-        mc.deposit(333);
-        vm.prank(depositor2);
-        mc.deposit(222);
+        vm.prank(staker);
+        mc.stake(333);
+        vm.prank(staker2);
+        mc.stake(222);
     }
 
-    function testSuccessfulRefundUpdatesDeposited() public {
-        vm.prank(depositor);
-        mc.refund();
-        assertEq(mc.deposited(depositor), 0);
+    function testSuccessfulUnstakeUpdatesStaked() public {
+        vm.prank(staker);
+        mc.unstake();
+        assertEq(mc.staked(staker), 0);
     }
 
-    function testSuccessfulDepositsUpdatesTotalDeposited() public {
-        vm.prank(depositor);
-        mc.refund();
+    function testSuccessfulStakesUpdatesTotalStaked() public {
+        vm.prank(staker);
+        mc.unstake();
 
-        vm.prank(depositor2);
-        mc.refund();
+        vm.prank(staker2);
+        mc.unstake();
 
-        assertEq(mc.totalDeposited(), 0);
+        assertEq(mc.totalStaked(), 0);
     }
 
-    function testSuccessfulRefundCallsTransfer() public {
-        vm.prank(depositor);
-        mc.refund();
+    function testSuccessfulUnstakeCallsTransfer() public {
+        vm.prank(staker);
+        mc.unstake();
 
         (address from, address to, uint256 amount) = daoToken
             .transferFromCalledWith();
         assertEq(from, address(mc));
-        assertEq(to, depositor);
+        assertEq(to, staker);
         assertEq(amount, 333);
     }
 }
