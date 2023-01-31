@@ -5,15 +5,21 @@ pragma solidity ^0.8.17;
 import {MToken} from "./MToken.sol";
 import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 
-/// [XXX] Rename MoltenElection
+/// [XXX] Rename to MoltenElection
 contract MoltenCampaignMarket {
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
     uint256 public threshold;
+    uint256 public duration;
 
-    constructor(address daoTokenAddress, uint256 _threshold) {
+    constructor(
+        address daoTokenAddress,
+        uint256 _threshold,
+        uint256 _duration
+    ) {
         daoToken = IERC20Votes(daoTokenAddress);
         threshold = _threshold;
+        duration = _duration;
     }
 }
 

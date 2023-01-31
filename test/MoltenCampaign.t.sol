@@ -9,11 +9,13 @@ contract CreationTest is Test {
     MoltenCampaignMarket public mcm;
     ERC20VotesMintableMock public daoToken;
     uint256 public threshold;
+    uint32 public duration;
 
     function setUp() public {
         daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
         threshold = 1;
-        mcm = new MoltenCampaignMarket(address(daoToken), threshold);
+        duration = 1;
+        mcm = new MoltenCampaignMarket(address(daoToken), threshold, duration);
     }
 
     function testHasMarket() public {
@@ -33,15 +35,18 @@ contract CreationTest is Test {
 abstract contract TestBase is Test {
     ERC20VotesMintableMock public daoToken;
     uint256 public threshold;
+    uint32 public duration;
     address public representative = address(0x123);
     MoltenCampaign public mc;
 
     function setUp() public virtual {
         daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
         threshold = 1;
+        duration = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
-            threshold
+            threshold,
+            duration
         );
         vm.prank(representative);
         mc = new MoltenCampaign(address(mcm));
@@ -51,6 +56,7 @@ abstract contract TestBase is Test {
 abstract contract TestBaseFailing is Test {
     ERC20VotesMintableFailedMock public daoToken;
     uint256 public threshold;
+    uint32 public duration;
     address public representative = address(0x123);
     MoltenCampaign public mc;
 
@@ -60,9 +66,11 @@ abstract contract TestBaseFailing is Test {
             "GT"
         );
         threshold = 1;
+        duration = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
-            threshold
+            threshold,
+            duration
         );
         vm.prank(representative);
         mc = new MoltenCampaign(address(mcm));
@@ -152,7 +160,7 @@ contract UnstakeTest is TestBase {
         assertEq(mc.staked(staker), 0);
     }
 
-    function testSuccessfulStakesUpdatesTotalStaked() public {
+    function testSuccessfulUnstakesUpdateTotalStaked() public {
         vm.prank(staker);
         mc.unstake();
 
