@@ -16,6 +16,7 @@ contract CreationTest is Test {
     function testHasDaoToken() public {
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
+            1,
             1
         );
 
@@ -25,9 +26,20 @@ contract CreationTest is Test {
     function testHasThreshold(uint256 threshold) public {
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
-            threshold
+            threshold,
+            1
         );
 
         assertEq(mcm.threshold(), threshold);
+    }
+
+    function testHasDuration(uint32 duration) public {
+        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
+            address(daoToken),
+            1,
+            duration
+        );
+
+        assertEq(mcm.duration(), duration);
     }
 }
