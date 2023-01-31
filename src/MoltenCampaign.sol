@@ -5,6 +5,7 @@ pragma solidity ^0.8.17;
 import {MToken} from "./MToken.sol";
 import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 
+/// [XXX] Rename MoltenElection
 contract MoltenCampaignMarket {
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
@@ -20,8 +21,8 @@ contract MoltenCampaign {
     address public representative;
     MoltenCampaignMarket public market;
 
-    uint256 public totalDeposited;
-    mapping(address => uint256) public deposited;
+    uint256 public totalStaked;
+    mapping(address => uint256) public staked;
 
     constructor(address marketAddress) {
         representative = msg.sender;
@@ -32,19 +33,19 @@ contract MoltenCampaign {
         return IERC20Votes(market.daoToken());
     }
 
-    function deposit(uint256 amount) public {
-        deposited[msg.sender] += amount;
-        totalDeposited += amount;
+    function stake(uint256 amount) public {
+        staked[msg.sender] += amount;
+        totalStaked += amount;
 
         _getDaoToken().transferFrom(msg.sender, address(this), amount);
     }
 
-    function refund() public {
-        uint256 _deposited = deposited[msg.sender];
+    function unstake() public {
+        uint256 _staked = staked[msg.sender];
 
-        deposited[msg.sender] = 0;
-        totalDeposited -= _deposited;
+        staked[msg.sender] = 0;
+        totalStaked -= _staked;
 
-        _getDaoToken().transferFrom(address(this), msg.sender, _deposited);
+        _getDaoToken().transferFrom(address(this), msg.sender, _staked);
     }
 }
