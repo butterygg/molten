@@ -88,14 +88,14 @@ contract StakeTest is TestBase {
         staker2 = address(0x332);
     }
 
-    function testSuccessfulStakeUpdatesStaked() public {
+    function testStakeUpdatesStaked() public {
         vm.prank(staker);
         mc.stake(333);
 
         assertEq(mc.staked(staker), 333);
     }
 
-    function testSuccessfulStakesUpdatesTotalStaked() public {
+    function testStakeUpdatesTotalStaked() public {
         vm.prank(staker);
         mc.stake(333);
 
@@ -105,7 +105,7 @@ contract StakeTest is TestBase {
         assertEq(mc.totalStaked(), 555);
     }
 
-    function testSuccessfulStakeCallsTransfer() public {
+    function testStakeCallsTransfer() public {
         vm.prank(staker);
         mc.stake(333);
 
@@ -115,9 +115,11 @@ contract StakeTest is TestBase {
         assertEq(to, address(mc));
         assertEq(amount, 333);
     }
+
+    /// [XXX] function testStakeMintsMTokens()
 }
 
-contract StakeFailTest is TestBaseFailing {
+contract WrongStakeTest is TestBaseFailing {
     address public staker;
     address public staker2;
 
@@ -128,7 +130,7 @@ contract StakeFailTest is TestBaseFailing {
         staker2 = address(0x332);
     }
 
-    function testUnsuccessfulStakeDoesntUpdate() public {
+    function testWrongStakeDoesntUpdate() public {
         vm.prank(staker);
         vm.expectRevert("ERC20VMFM transferFrom");
         mc.stake(333);
@@ -154,13 +156,13 @@ contract UnstakeTest is TestBase {
         mc.stake(222);
     }
 
-    function testSuccessfulUnstakeUpdatesStaked() public {
+    function testUnstakeUpdatesStaked() public {
         vm.prank(staker);
         mc.unstake();
         assertEq(mc.staked(staker), 0);
     }
 
-    function testSuccessfulUnstakesUpdateTotalStaked() public {
+    function testUnstakeUpdatesTotalStaked() public {
         vm.prank(staker);
         mc.unstake();
 
@@ -170,7 +172,7 @@ contract UnstakeTest is TestBase {
         assertEq(mc.totalStaked(), 0);
     }
 
-    function testSuccessfulUnstakeCallsTransfer() public {
+    function testUnstakeCallsTransfer() public {
         vm.prank(staker);
         mc.unstake();
 
@@ -179,5 +181,26 @@ contract UnstakeTest is TestBase {
         assertEq(from, address(mc));
         assertEq(to, staker);
         assertEq(amount, 333);
+    }
+}
+
+contract WrongUnstakeTest is TestBaseFailing {
+    address public staker;
+    address public staker2;
+
+    function setUp() public override {
+        super.setUp();
+
+        staker = address(0x331);
+        staker2 = address(0x332);
+    }
+
+    function testWrongUnstakeDoesntUpdate() public {
+        vm.prank(staker);
+        vm.expectRevert("ERC20VMFM transferFrom");
+        mc.unstake();
+
+        assertEq(mc.staked(staker), 0);
+        assertEq(mc.totalStaked(), 0);
     }
 }
