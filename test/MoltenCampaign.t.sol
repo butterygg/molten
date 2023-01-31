@@ -6,9 +6,9 @@ import {ERC20VotesMintableMock, ERC20VotesMintableFailedMock} from "./helpers/ER
 import {MoltenCampaign, MoltenCampaignMarket} from "../src/MoltenCampaign.sol";
 
 contract CreationTest is Test {
-    MoltenCampaignMarket mcm;
-    ERC20VotesMintableMock daoToken;
-    uint256 threshold;
+    MoltenCampaignMarket public mcm;
+    ERC20VotesMintableMock public daoToken;
+    uint256 public threshold;
 
     function setUp() public {
         daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
@@ -31,42 +31,47 @@ contract CreationTest is Test {
 }
 
 abstract contract TestBase is Test {
-    ERC20VotesMintableMock daoToken;
-    uint256 threshold;
-    address representative = address(0x123);
-    MoltenCampaign mc;
+    ERC20VotesMintableMock public daoToken;
+    uint256 public threshold;
+    address public representative = address(0x123);
+    MoltenCampaign public mc;
 
     function setUp() public virtual {
         daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
         threshold = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
-            threshold);
+            threshold
+        );
         vm.prank(representative);
         mc = new MoltenCampaign(address(mcm));
     }
 }
 
 abstract contract TestBaseFailing is Test {
-    ERC20VotesMintableFailedMock daoToken;
-    uint256 threshold;
-    address representative = address(0x123);
-    MoltenCampaign mc;
+    ERC20VotesMintableFailedMock public daoToken;
+    uint256 public threshold;
+    address public representative = address(0x123);
+    MoltenCampaign public mc;
 
     function setUp() public virtual {
-        daoToken = new ERC20VotesMintableFailedMock("DAO governance token", "GT");
+        daoToken = new ERC20VotesMintableFailedMock(
+            "DAO governance token",
+            "GT"
+        );
         threshold = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
-            threshold);
+            threshold
+        );
         vm.prank(representative);
         mc = new MoltenCampaign(address(mcm));
     }
 }
 
 contract DepositTest is TestBase {
-    address depositor;
-    address depositor2;
+    address public depositor;
+    address public depositor2;
 
     function setUp() public override {
         super.setUp();
@@ -78,7 +83,7 @@ contract DepositTest is TestBase {
     function testSuccessfulDepositUpdatesDeposited() public {
         vm.prank(depositor);
         mc.deposit(333);
-        
+
         assertEq(mc.deposited(depositor), 333);
     }
 
@@ -88,7 +93,7 @@ contract DepositTest is TestBase {
 
         vm.prank(depositor2);
         mc.deposit(222);
-        
+
         assertEq(mc.totalDeposited(), 555);
     }
 
@@ -96,16 +101,17 @@ contract DepositTest is TestBase {
         vm.prank(depositor);
         mc.deposit(333);
 
-        (address from, address to, uint256 amount) = daoToken.transferFromCalledWith();
+        (address from, address to, uint256 amount) = daoToken
+            .transferFromCalledWith();
         assertEq(from, depositor);
         assertEq(to, address(mc));
         assertEq(amount, 333);
     }
 }
-    
+
 contract DepositFailTest is TestBaseFailing {
-    address depositor;
-    address depositor2;
+    address public depositor;
+    address public depositor2;
 
     function setUp() public override {
         super.setUp();
@@ -113,9 +119,10 @@ contract DepositFailTest is TestBaseFailing {
         depositor = address(0x331);
         depositor2 = address(0x332);
     }
+
     function testUnsuccessfulDepositDoesntUpdate() public {
         vm.prank(depositor);
-        vm.expectRevert("ERC20VotesMintableFailedMock transferFrom");
+        vm.expectRevert("ERC20VMFM transferFrom");
         mc.deposit(333);
 
         assertEq(mc.deposited(depositor), 0);
@@ -124,8 +131,8 @@ contract DepositFailTest is TestBaseFailing {
 }
 
 contract RefundTest is TestBase {
-    address depositor;
-    address depositor2;
+    address public depositor;
+    address public depositor2;
 
     function setUp() public override {
         super.setUp();
@@ -142,7 +149,6 @@ contract RefundTest is TestBase {
     function testSuccessfulRefundUpdatesDeposited() public {
         vm.prank(depositor);
         mc.refund();
-        
         assertEq(mc.deposited(depositor), 0);
     }
 
@@ -152,7 +158,7 @@ contract RefundTest is TestBase {
 
         vm.prank(depositor2);
         mc.refund();
-        
+
         assertEq(mc.totalDeposited(), 0);
     }
 
@@ -160,7 +166,8 @@ contract RefundTest is TestBase {
         vm.prank(depositor);
         mc.refund();
 
-        (address from, address to, uint256 amount) = daoToken.transferFromCalledWith();
+        (address from, address to, uint256 amount) = daoToken
+            .transferFromCalledWith();
         assertEq(from, address(mc));
         assertEq(to, depositor);
         assertEq(amount, 333);

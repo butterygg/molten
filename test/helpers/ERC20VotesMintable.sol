@@ -47,7 +47,11 @@ contract ERC20VotesMintableMock is ERC20Votes {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        transferFromCalledWith = TransferFromCall({from: from, to: to, amount: amount});
+        transferFromCalledWith = TransferFromCall({
+            from: from,
+            to: to,
+            amount: amount
+        });
         return true;
     }
 }
@@ -74,8 +78,12 @@ contract ERC20VotesMintableFailedMock is ERC20Votes {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        transferFromCalledWith = TransferFromCall({from: from, to: to, amount: amount});
-        require(false, "ERC20VotesMintableFailedMock transferFrom");
+        transferFromCalledWith = TransferFromCall({
+            from: from,
+            to: to,
+            amount: amount
+        });
+        require(false, "ERC20VMFM transferFrom");
         return true;
     }
 }
