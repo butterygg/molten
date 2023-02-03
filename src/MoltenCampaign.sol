@@ -10,29 +10,54 @@ contract MoltenCampaignMarket {
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
     uint256 public threshold;
-    uint256 public duration;
+    uint32 public duration;
 
     constructor(
         address daoTokenAddress,
         uint256 _threshold,
-        uint256 _duration
+        uint32 _duration
     ) {
         daoToken = IERC20Votes(daoTokenAddress);
         threshold = _threshold;
         duration = _duration;
+    }
+
+    // [XXX] We could further dependency-inject by having a separate libs
+    // MTokenDeployer and MoltenCampaignDeployer which addresses are passed as
+    // argument of the constructor (or the function?).
+    function makeCampaign() external returns (MoltenCampaign) {
+        MToken mToken = new MToken(
+            string.concat("Molten ", daoToken.name()),
+            string.concat("m", daoToken.symbol()), // [XXX] Add campaigner (delegate) name
+            address(this)
+        );
+        MoltenCampaign mc = new MoltenCampaign(
+            msg.sender,
+            address(this),
+            address(mToken)
+        );
+        mToken.transferOwnership(address(mc));
+        return mc;
     }
 }
 
 contract MoltenCampaign {
     address public representative;
     MoltenCampaignMarket public market;
+    MToken public mToken;
 
     uint256 public totalStaked;
     mapping(address => uint256) public staked;
 
-    constructor(address marketAddress) {
-        representative = msg.sender;
+    // 💜 dumb constructors.
+    constructor(
+        address _representative,
+        address marketAddress,
+        address mTokenAddress
+    ) {
+        representative = _representative;
         market = MoltenCampaignMarket(marketAddress);
+        mToken = MToken(mTokenAddress);
     }
 
     function _getDaoToken() private view returns (IERC20Votes) {
@@ -43,6 +68,7 @@ contract MoltenCampaign {
         staked[msg.sender] += amount;
         totalStaked += amount;
 
+        mToken.mint(msg.sender, amount);
         _getDaoToken().transferFrom(msg.sender, address(this), amount);
     }
 
@@ -51,7 +77,8 @@ contract MoltenCampaign {
 
         staked[msg.sender] = 0;
         totalStaked -= _staked;
-
+    
+        mToken.burn(msg.sender, _staked);
         _getDaoToken().transferFrom(address(this), msg.sender, _staked);
     }
 }
