@@ -49,7 +49,8 @@ Another approach would be to use an abstract contract on our smart contracts,
 that would be used in tests but removed from production code. Meaning: code
 rewrite for production, but tightly controlled.
 
-This way, mocks would be set during test setups via for example `function setMTokenMock(IERC20)`, but these functions wouldn't be available in production.
+This way, mocks would be set during test setups via for example `function
+setMTokenMock(IERC20)`, but these functions wouldn't be available in production.
 
 Of couse the problem then lies in how reliable would code rewrite be. To be
 tried.

@@ -5,8 +5,8 @@ import "forge-std/Test.sol";
 import {MoltenCampaign, MoltenCampaignMarket} from "../src/MoltenCampaign.sol";
 import {MToken} from "../src/MToken.sol";
 import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
-import {ERC20VotesMintableMock, ERC20VotesMintableFailedMock} from "./helpers/ERC20VotesMintable.sol";
-import {MTokenMock, MTokenFailingMock} from "./helpers/MTokenMock.sol";
+import {ERC20VotesMintableMock} from "./helpers/ERC20VotesMintable.sol";
+import {MTokenMock} from "./helpers/MTokenMock.sol";
 
 abstract contract TestBase is Test {
     uint256 public threshold;
@@ -14,9 +14,7 @@ abstract contract TestBase is Test {
     uint128 public cooldownDuration;
     address public representative = address(0x123);
     MoltenCampaign public mc;
-}
 
-abstract contract TestBaseDefault is TestBase {
     ERC20VotesMintableMock public daoToken;
     MTokenMock public mToken;
 
@@ -40,82 +38,25 @@ abstract contract TestBaseDefault is TestBase {
         mc = new MoltenCampaign(representative, address(mcm), address(mToken));
         mToken.transferOwnership(address(mc));
     }
-}
 
-abstract contract TestBaseFailingTransfer is TestBase {
-    ERC20VotesMintableFailedMock public daoToken;
-    MTokenMock public mToken;
-
-    function setUp() public virtual {
-        daoToken = new ERC20VotesMintableFailedMock(
-            "DAO governance token",
-            "GT"
-        );
-        threshold = 1;
-        duration = 1;
-        cooldownDuration = 1;
-        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
-            address(daoToken),
-            threshold,
-            duration,
-            cooldownDuration
-        );
-        vm.prank(representative);
-        mToken = new MTokenMock(
-            string.concat("Molten ", daoToken.name()),
-            string.concat("m", daoToken.symbol()), // [XXX] Add campaigner (delegate) name
-            address(this)
-        );
-        mc = new MoltenCampaign(representative, address(mcm), address(mToken));
-        mToken.transferOwnership(address(mc));
-    }
-
-    function setFail() public virtual {
+    function setFailTransfer() public virtual {
         daoToken.setFail();
     }
 
-    function unsetFail() public virtual {
+    function unsetFailTransfer() public virtual {
         daoToken.unsetFail();
     }
-}
 
-abstract contract TestBaseFailingMint is TestBase {
-    ERC20VotesMintableMock public daoToken;
-    MTokenFailingMock public mToken;
-
-    function setUp() public virtual {
-        daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
-        threshold = 1;
-        duration = 1;
-        cooldownDuration = 1;
-        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
-            address(daoToken),
-            threshold,
-            duration,
-            cooldownDuration
-        );
-        vm.prank(representative);
-        mToken = new MTokenFailingMock(
-            string.concat("Molten ", daoToken.name()),
-            string.concat("m", daoToken.symbol()), // [XXX] Add campaigner (delegate) name
-            address(this)
-        );
-        mc = new MoltenCampaign(representative, address(mcm), address(mToken));
-        mToken.transferOwnership(address(mc));
-
-        setFail();
-    }
-
-    function setFail() public virtual {
+    function setFailMint() public virtual {
         mToken.setFail();
     }
 
-    function unsetFail() public virtual {
+    function unsetFailMint() public virtual {
         mToken.unsetFail();
     }
 }
 
-contract StakeTest is TestBaseDefault {
+contract StakeTest is TestBase {
     address public staker;
     address public staker2;
 
@@ -172,13 +113,13 @@ contract StakeTest is TestBaseDefault {
     }
 }
 
-contract CantTransferStakeTest is TestBaseFailingTransfer {
+contract CantTransferStakeTest is TestBase {
     address public staker = address(0x331);
 
     function setUp() public override {
         super.setUp();
 
-        setFail();
+        setFailTransfer();
     }
 
     function testWrongStakeReverts() public {
@@ -188,13 +129,13 @@ contract CantTransferStakeTest is TestBaseFailingTransfer {
     }
 }
 
-contract CantMintStakeTest is TestBaseFailingMint {
-    address public staker;
+contract CantMintStakeTest is TestBase {
+    address public staker = address(0x331);
 
     function setUp() public override {
         super.setUp();
 
-        staker = address(0x331);
+        setFailMint();
     }
 
     function testWrongStakeReverts() public {
@@ -204,7 +145,7 @@ contract CantMintStakeTest is TestBaseFailingMint {
     }
 }
 
-contract UnstakeTest is TestBaseDefault {
+contract UnstakeTest is TestBase {
     address public staker = address(0x331);
     address public staker2 = address(0x332);
 
@@ -264,7 +205,7 @@ contract UnstakeTest is TestBaseDefault {
     }
 }
 
-contract UnstakeNoStakeTest is TestBaseDefault {
+contract UnstakeNoStakeTest is TestBase {
     address public staker = address(0x331);
 
     function setUp() public override {
@@ -278,7 +219,7 @@ contract UnstakeNoStakeTest is TestBaseDefault {
     }
 }
 
-contract CantTransferUnstakeTest is TestBaseFailingTransfer {
+contract CantTransferUnstakeTest is TestBase {
     address public staker = address(0x331);
 
     function setUp() public override {
@@ -286,7 +227,7 @@ contract CantTransferUnstakeTest is TestBaseFailingTransfer {
 
         vm.prank(staker);
         mc.stake(333);
-        setFail();
+        setFailTransfer();
     }
 
     function testWrongUnstakeReverts() public {
@@ -296,17 +237,17 @@ contract CantTransferUnstakeTest is TestBaseFailingTransfer {
     }
 }
 
-contract CantBurnUnstakeTest is TestBaseFailingMint {
+contract CantBurnUnstakeTest is TestBase {
     address public staker;
 
     function setUp() public override {
         super.setUp();
 
-        unsetFail();
+        unsetFailMint();
         staker = address(0x331);
         vm.prank(staker);
         mc.stake(333); // Set up MoltenCampaign state.
-        setFail();
+        setFailMint();
     }
 
     function testWrongUntakeReverts() public {
