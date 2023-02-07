@@ -17,6 +17,7 @@ contract CreationTest is Test {
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             1,
+            1,
             1
         );
 
@@ -27,6 +28,7 @@ contract CreationTest is Test {
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             threshold,
+            1,
             1
         );
 
@@ -37,10 +39,22 @@ contract CreationTest is Test {
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             1,
-            duration
+            duration,
+            1
         );
 
         assertEq(mcm.duration(), duration);
+    }
+
+    function testHasCooldownDuration(uint32 cooldownDuration) public {
+        MoltenCampaignMarket mcm = new MoltenCampaignMarket(
+            address(daoToken),
+            1,
+            1,
+            cooldownDuration
+        );
+
+        assertEq(mcm.cooldownDuration(), cooldownDuration);
     }
 }
 
@@ -49,12 +63,19 @@ contract MakeCampaignTest is Test {
     ERC20VotesMintable public daoToken;
     uint256 public threshold;
     uint32 public duration;
+    uint32 public cooldownDuration;
 
     function setUp() public {
         daoToken = new ERC20VotesMintable("DAO governance token", "GT");
         threshold = 1;
         duration = 1;
-        mcm = new MoltenCampaignMarket(address(daoToken), threshold, duration);
+        cooldownDuration = 1;
+        mcm = new MoltenCampaignMarket(
+            address(daoToken),
+            threshold,
+            duration,
+            cooldownDuration
+        );
     }
 
     function testHasMarket() public {

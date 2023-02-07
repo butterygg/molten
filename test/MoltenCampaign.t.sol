@@ -8,24 +8,28 @@ import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
 import {ERC20VotesMintableMock, ERC20VotesMintableFailedMock} from "./helpers/ERC20VotesMintable.sol";
 import {MTokenMock, MTokenFailingMock} from "./helpers/MTokenMock.sol";
 
-
 abstract contract TestBase is Test {
-    ERC20VotesMintableMock public daoToken;
-    MTokenMock public mToken;
-
     uint256 public threshold;
-    uint32 public duration;
+    uint128 public duration;
+    uint128 public cooldownDuration;
     address public representative = address(0x123);
     MoltenCampaign public mc;
+}
+
+abstract contract TestBaseDefault is TestBase {
+    ERC20VotesMintableMock public daoToken;
+    MTokenMock public mToken;
 
     function setUp() public virtual {
         daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
         threshold = 1;
         duration = 1;
+        cooldownDuration = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             threshold,
-            duration
+            duration,
+            cooldownDuration
         );
         vm.prank(representative);
         mToken = new MTokenMock(
@@ -38,14 +42,9 @@ abstract contract TestBase is Test {
     }
 }
 
-abstract contract TestBaseFailingTransfer is Test {
+abstract contract TestBaseFailingTransfer is TestBase {
     ERC20VotesMintableFailedMock public daoToken;
     MTokenMock public mToken;
-
-    uint256 public threshold;
-    uint32 public duration;
-    address public representative = address(0x123);
-    MoltenCampaign public mc;
 
     function setUp() public virtual {
         daoToken = new ERC20VotesMintableFailedMock(
@@ -54,10 +53,12 @@ abstract contract TestBaseFailingTransfer is Test {
         );
         threshold = 1;
         duration = 1;
+        cooldownDuration = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             threshold,
-            duration
+            duration,
+            cooldownDuration
         );
         vm.prank(representative);
         mToken = new MTokenMock(
@@ -70,26 +71,20 @@ abstract contract TestBaseFailingTransfer is Test {
     }
 }
 
-abstract contract TestBaseFailingMint is Test {
+abstract contract TestBaseFailingMint is TestBase {
     ERC20VotesMintableMock public daoToken;
     MTokenFailingMock public mToken;
 
-    uint256 public threshold;
-    uint32 public duration;
-    address public representative = address(0x123);
-    MoltenCampaign public mc;
-
     function setUp() public virtual {
-        daoToken = new ERC20VotesMintableMock(
-            "DAO governance token",
-            "GT"
-        );
+        daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
         threshold = 1;
         duration = 1;
+        cooldownDuration = 1;
         MoltenCampaignMarket mcm = new MoltenCampaignMarket(
             address(daoToken),
             threshold,
-            duration
+            duration,
+            cooldownDuration
         );
         vm.prank(representative);
         mToken = new MTokenFailingMock(
@@ -104,14 +99,15 @@ abstract contract TestBaseFailingMint is Test {
     }
 
     function setFail() public virtual {
-        mToken.setFail(); 
+        mToken.setFail();
     }
+
     function unsetFail() public virtual {
-        mToken.unsetFail(); 
+        mToken.unsetFail();
     }
 }
 
-contract StakeTest is TestBase {
+contract StakeTest is TestBaseDefault {
     address public staker;
     address public staker2;
 
@@ -159,6 +155,13 @@ contract StakeTest is TestBase {
         assertEq(to, staker);
         assertEq(amount, 333);
     }
+
+    function testStakeResetsCooldown() public {
+        vm.prank(staker);
+        mc.stake(333);
+
+        assertEq(mc.cooldownEnd(), block.timestamp + cooldownDuration);
+    }
 }
 
 contract CantTransferStakeTest is TestBaseFailingTransfer {
@@ -170,13 +173,10 @@ contract CantTransferStakeTest is TestBaseFailingTransfer {
         staker = address(0x331);
     }
 
-    function testWrongStakeDoesntUpdate() public {
+    function testWrongStakeReverts() public {
         vm.prank(staker);
         vm.expectRevert("ERC20VMFM transferFrom");
         mc.stake(333);
-
-        assertEq(mc.staked(staker), 0);
-        assertEq(mc.totalStaked(), 0);
     }
 }
 
@@ -189,18 +189,14 @@ contract CantMintStakeTest is TestBaseFailingMint {
         staker = address(0x331);
     }
 
-    function testWrongStakeDoesntUpdate() public {
+    function testWrongStakeReverts() public {
         vm.prank(staker);
         vm.expectRevert("MTFM mint");
         mc.stake(333);
-
-        assertEq(mc.staked(staker), 0);
-        assertEq(mc.totalStaked(), 0);
     }
-    
 }
 
-contract UnstakeTest is TestBase {
+contract UnstakeTest is TestBaseDefault {
     address public staker;
     address public staker2;
 
@@ -254,6 +250,13 @@ contract UnstakeTest is TestBase {
         assertEq(to, staker);
         assertEq(amount, 333);
     }
+
+    function testUnstakeResetsCooldown() public {
+        vm.prank(staker);
+        mc.unstake();
+
+        assertEq(mc.cooldownEnd(), block.timestamp + cooldownDuration);
+    }
 }
 
 contract CantTransferUnstakeTest is TestBaseFailingTransfer {
@@ -267,13 +270,10 @@ contract CantTransferUnstakeTest is TestBaseFailingTransfer {
         staker2 = address(0x332);
     }
 
-    function testWrongUnstakeDoesntUpdate() public {
+    function testWrongUnstakeReverts() public {
         vm.prank(staker);
         vm.expectRevert("ERC20VMFM transferFrom");
         mc.unstake();
-
-        assertEq(mc.staked(staker), 0);
-        assertEq(mc.totalStaked(), 0);
     }
 }
 
@@ -290,13 +290,9 @@ contract CantMintUnstakeTest is TestBaseFailingMint {
         setFail();
     }
 
-    function testWrongUntakeDoesntUpdate() public {
+    function testWrongUntakeReverts() public {
         vm.prank(staker);
         vm.expectRevert("MTFM burn");
         mc.unstake();
-
-        assertEq(mc.staked(staker), 333);
-        assertEq(mc.totalStaked(), 333);
     }
-    
 }

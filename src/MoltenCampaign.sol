@@ -10,16 +10,19 @@ contract MoltenCampaignMarket {
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
     uint256 public threshold;
-    uint32 public duration;
+    uint128 public duration;
+    uint128 public cooldownDuration;
 
     constructor(
         address daoTokenAddress,
         uint256 _threshold,
-        uint32 _duration
+        uint128 _duration,
+        uint128 _cooldownDuration
     ) {
         daoToken = IERC20Votes(daoTokenAddress);
         threshold = _threshold;
         duration = _duration;
+        cooldownDuration = _cooldownDuration;
     }
 
     // [XXX] We could further dependency-inject by having a separate libs
@@ -42,12 +45,15 @@ contract MoltenCampaignMarket {
 }
 
 contract MoltenCampaign {
+    // Immutable props.
     address public representative;
     MoltenCampaignMarket public market;
     MToken public mToken;
 
+    // Mutable props.
     uint256 public totalStaked;
     mapping(address => uint256) public staked;
+    uint256 public cooldownEnd;
 
     // 💜 dumb constructors.
     constructor(
@@ -64,21 +70,28 @@ contract MoltenCampaign {
         return IERC20Votes(market.daoToken());
     }
 
+    function _resetCooldown() internal {
+        cooldownEnd = block.timestamp + market.cooldownDuration();
+    }
+
     function stake(uint256 amount) public {
         staked[msg.sender] += amount;
         totalStaked += amount;
 
         mToken.mint(msg.sender, amount);
+        _resetCooldown();
         _getDaoToken().transferFrom(msg.sender, address(this), amount);
     }
 
     function unstake() public {
         uint256 _staked = staked[msg.sender];
+        // [XXX] Require unstake to do nothing for no-stake.
 
         staked[msg.sender] = 0;
         totalStaked -= _staked;
-    
+
         mToken.burn(msg.sender, _staked);
+        _resetCooldown();
         _getDaoToken().transferFrom(address(this), msg.sender, _staked);
     }
 }
