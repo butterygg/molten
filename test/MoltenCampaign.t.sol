@@ -69,6 +69,14 @@ abstract contract TestBaseFailingTransfer is TestBase {
         mc = new MoltenCampaign(representative, address(mcm), address(mToken));
         mToken.transferOwnership(address(mc));
     }
+
+    function setFail() public virtual {
+        daoToken.setFail();
+    }
+
+    function unsetFail() public virtual {
+        daoToken.unsetFail();
+    }
 }
 
 abstract contract TestBaseFailingMint is TestBase {
@@ -165,12 +173,12 @@ contract StakeTest is TestBaseDefault {
 }
 
 contract CantTransferStakeTest is TestBaseFailingTransfer {
-    address public staker;
+    address public staker = address(0x331);
 
     function setUp() public override {
         super.setUp();
 
-        staker = address(0x331);
+        setFail();
     }
 
     function testWrongStakeReverts() public {
@@ -197,14 +205,11 @@ contract CantMintStakeTest is TestBaseFailingMint {
 }
 
 contract UnstakeTest is TestBaseDefault {
-    address public staker;
-    address public staker2;
+    address public staker = address(0x331);
+    address public staker2 = address(0x332);
 
     function setUp() public override {
         super.setUp();
-
-        staker = address(0x331);
-        staker2 = address(0x332);
 
         // We call stake as a means to update the `totalStaked` and `staked`
         // states.
@@ -259,15 +264,29 @@ contract UnstakeTest is TestBaseDefault {
     }
 }
 
+contract UnstakeNoStakeTest is TestBaseDefault {
+    address public staker = address(0x331);
+
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function testUnstakeReverts() public {
+        vm.prank(staker);
+        vm.expectRevert("Molten: unstake 0");
+        mc.unstake();
+    }
+}
+
 contract CantTransferUnstakeTest is TestBaseFailingTransfer {
-    address public staker;
-    address public staker2;
+    address public staker = address(0x331);
 
     function setUp() public override {
         super.setUp();
 
-        staker = address(0x331);
-        staker2 = address(0x332);
+        vm.prank(staker);
+        mc.stake(333);
+        setFail();
     }
 
     function testWrongUnstakeReverts() public {
@@ -277,7 +296,7 @@ contract CantTransferUnstakeTest is TestBaseFailingTransfer {
     }
 }
 
-contract CantMintUnstakeTest is TestBaseFailingMint {
+contract CantBurnUnstakeTest is TestBaseFailingMint {
     address public staker;
 
     function setUp() public override {

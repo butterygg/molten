@@ -85,7 +85,7 @@ contract MoltenCampaign {
 
     function unstake() public {
         uint256 _staked = staked[msg.sender];
-        // [XXX] Require unstake to do nothing for no-stake.
+        require(_staked > 0, "Molten: unstake 0");
 
         staked[msg.sender] = 0;
         totalStaked -= _staked;

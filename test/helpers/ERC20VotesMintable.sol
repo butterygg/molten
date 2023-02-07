@@ -57,6 +57,8 @@ contract ERC20VotesMintableMock is ERC20Votes {
 }
 
 contract ERC20VotesMintableFailedMock is ERC20Votes {
+    bool private _fail = false;
+
     struct TransferFromCall {
         address from;
         address to;
@@ -83,7 +85,15 @@ contract ERC20VotesMintableFailedMock is ERC20Votes {
             to: to,
             amount: amount
         });
-        require(false, "ERC20VMFM transferFrom");
+        require(!_fail, "ERC20VMFM transferFrom");
         return true;
+    }
+
+    function setFail() public {
+        _fail = true;
+    }
+
+    function unsetFail() public {
+        _fail = false;
     }
 }
