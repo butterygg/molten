@@ -5,8 +5,7 @@ pragma solidity ^0.8.17;
 import {MToken} from "./MToken.sol";
 import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 
-/// [XXX] Rename to MoltenElection
-contract MoltenCampaignMarket {
+contract MoltenElection {
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
     uint256 public threshold;
@@ -25,13 +24,16 @@ contract MoltenCampaignMarket {
         cooldownDuration = _cooldownDuration;
     }
 
-    // [XXX] We could further dependency-inject by having a separate libs
+    // 🎨 We could further dependency-inject by having a separate libs
     // MTokenDeployer and MoltenCampaignDeployer which addresses are passed as
-    // argument of the constructor (or the function?).
-    function makeCampaign() external returns (MoltenCampaign) {
+    // argument of the constructor/function.
+    function makeCampaign(string calldata delegateName)
+        external
+        returns (MoltenCampaign)
+    {
         MToken mToken = new MToken(
             string.concat("Molten ", daoToken.name()),
-            string.concat("m", daoToken.symbol()), // [XXX] Add campaigner (delegate) name
+            string.concat("m", daoToken.symbol(), "-", delegateName),
             address(this)
         );
         MoltenCampaign mc = new MoltenCampaign(
@@ -47,7 +49,7 @@ contract MoltenCampaignMarket {
 contract MoltenCampaign {
     // Immutable props.
     address public representative;
-    MoltenCampaignMarket public market;
+    MoltenElection public election;
     MToken public mToken;
 
     // Mutable props.
@@ -55,23 +57,22 @@ contract MoltenCampaign {
     mapping(address => uint256) public staked;
     uint256 public cooldownEnd;
 
-    // 💜 dumb constructors.
     constructor(
         address _representative,
-        address marketAddress,
+        address electionAddress,
         address mTokenAddress
     ) {
         representative = _representative;
-        market = MoltenCampaignMarket(marketAddress);
+        election = MoltenElection(electionAddress);
         mToken = MToken(mTokenAddress);
     }
 
     function _getDaoToken() private view returns (IERC20Votes) {
-        return IERC20Votes(market.daoToken());
+        return IERC20Votes(election.daoToken());
     }
 
     function _resetCooldown() internal {
-        cooldownEnd = block.timestamp + market.cooldownDuration();
+        cooldownEnd = block.timestamp + election.cooldownDuration();
     }
 
     function stake(uint256 amount) public {
