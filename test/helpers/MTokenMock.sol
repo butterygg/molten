@@ -6,6 +6,8 @@ import {ERC20, ERC20Pausable, Pausable} from "openzeppelin/token/ERC20/extension
 import {Owned} from "solmate/auth/Owned.sol";
 
 contract MTokenMock is ERC20Pausable, Owned {
+    bool public _mockFail = false;
+
     struct MintCall {
         address _sender;
         address to;
@@ -39,6 +41,7 @@ contract MTokenMock is ERC20Pausable, Owned {
             to: to,
             amount: amount
         });
+        require(!_mockFail, "MTFM mint");
     }
 
     function burn(address account, uint256 amount) public virtual onlyOwner {
@@ -47,37 +50,18 @@ contract MTokenMock is ERC20Pausable, Owned {
             account: account,
             amount: amount
         });
+        require(!_mockFail, "MTFM burn");
     }
 
     function totalSupply() public view override returns (uint256) {
         return super.totalSupply();
     }
-}
-
-contract MTokenFailingMock is MTokenMock {
-    bool private _fail = false;
-
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        address _owner
-    ) MTokenMock(name_, symbol_, _owner) {}
 
     function setFail() public {
-        _fail = true;
+        _mockFail = true;
     }
 
     function unsetFail() public {
-        _fail = false;
-    }
-
-    function mint(address to, uint256 amount) public override onlyOwner {
-        super.mint(to, amount);
-        require(!_fail, "MTFM mint");
-    }
-
-    function burn(address account, uint256 amount) public override onlyOwner {
-        super.burn(account, amount);
-        require(!_fail, "MTFM burn");
+        _mockFail = false;
     }
 }
