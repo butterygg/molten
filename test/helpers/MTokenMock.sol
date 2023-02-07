@@ -34,11 +34,19 @@ contract MTokenMock is ERC20Pausable, Owned {
     }
 
     function mint(address to, uint256 amount) public virtual onlyOwner {
-        mintCalledWith = MintCall({_sender:msg.sender, to: to, amount: amount});
+        mintCalledWith = MintCall({
+            _sender: msg.sender,
+            to: to,
+            amount: amount
+        });
     }
 
     function burn(address account, uint256 amount) public virtual onlyOwner {
-        burnCalledWith = BurnCall({_sender:msg.sender, account: account, amount: amount});
+        burnCalledWith = BurnCall({
+            _sender: msg.sender,
+            account: account,
+            amount: amount
+        });
     }
 
     function totalSupply() public view override returns (uint256) {
@@ -58,6 +66,7 @@ contract MTokenFailingMock is MTokenMock {
     function setFail() public {
         _fail = true;
     }
+
     function unsetFail() public {
         _fail = false;
     }
