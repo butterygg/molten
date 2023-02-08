@@ -36,13 +36,13 @@ contract MoltenElection {
             string.concat("m", daoToken.symbol(), "-", delegateName),
             address(this)
         );
-        MoltenCampaign mc = new MoltenCampaign(
+        MoltenCampaign campaign = new MoltenCampaign(
             msg.sender,
             address(this),
             address(mToken)
         );
-        mToken.transferOwnership(address(mc));
-        return mc;
+        mToken.transferOwnership(address(campaign));
+        return campaign;
     }
 }
 
@@ -94,5 +94,13 @@ contract MoltenCampaign {
         mToken.burn(msg.sender, _staked);
         _resetCooldown();
         _getDaoToken().transferFrom(address(this), msg.sender, _staked);
+    }
+
+    function takeOffice() public {
+        require(
+            totalStaked >= election.threshold(),
+            "Molten: threshold not reached"
+        );
+        require(block.timestamp >= cooldownEnd, "Molten: cooldown ongoing");
     }
 }
