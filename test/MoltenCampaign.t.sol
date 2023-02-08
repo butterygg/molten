@@ -226,3 +226,20 @@ contract CantBurnUnstakeTest is TestBase {
         campaign.unstake();
     }
 }
+
+contract CantTakeOfficeTest is TestBase {
+    address public staker = address(0x331);
+
+    function testNoTresholdCantTakeOffice() public {
+        vm.expectRevert("Molten: threshold not reached");
+        campaign.takeOffice();
+    }
+
+    function testCooldownNotEndedCantTakeOffice() public {
+        vm.prank(staker);
+        campaign.stake(threshold + 1);
+
+        vm.expectRevert("Molten: cooldown ongoing");
+        campaign.takeOffice();
+    }
+}
