@@ -7,11 +7,12 @@ import {MToken} from "../src/MToken.sol";
 import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
 import {ERC20VotesMintableMock} from "./helpers/ERC20VotesMintable.sol";
 import {MTokenMock} from "./helpers/MTokenMock.sol";
+import {MoltenElectionMock} from "./helpers/MoltenCampaignMock.sol";
 
 abstract contract TestBase is Test {
-    uint256 public threshold = 1;
-    uint128 public duration = 1;
-    uint128 public cooldownDuration = 1;
+    uint256 public threshold = 100;
+    uint128 public duration = 60;
+    uint128 public cooldownDuration = 15;
     address public delegate = address(0x123);
     string public delegateName = "deldel";
     MoltenCampaign public campaign;
@@ -42,19 +43,19 @@ abstract contract TestBase is Test {
     }
 
     function setFailTransfer() public virtual {
-        daoToken.setFail();
+        daoToken.__setFail();
     }
 
     function unsetFailTransfer() public virtual {
-        daoToken.unsetFail();
+        daoToken.__unsetFail();
     }
 
     function setFailMint() public virtual {
-        mToken.setFail();
+        mToken.__setFail();
     }
 
     function unsetFailMint() public virtual {
-        mToken.unsetFail();
+        mToken.__unsetFail();
     }
 }
 
@@ -82,14 +83,15 @@ contract StakeTest is TestBase {
 
     function testStakeCallsTransfer() public {
         (address from, address to, uint256 amount) = daoToken
-            .transferFromCalledWith();
+            .__transferFromCalledWith();
         assertEq(from, staker);
         assertEq(to, address(campaign));
         assertEq(amount, 333);
     }
 
     function testStakeMintsMTokens() public {
-        (address _sender, address to, uint256 amount) = mToken.mintCalledWith();
+        (address _sender, address to, uint256 amount) = mToken
+            .__mintCalledWith();
         assertEq(_sender, mToken.owner());
         assertEq(to, staker);
         assertEq(amount, 333);
@@ -162,14 +164,15 @@ contract UnstakeTest is TestBase {
 
     function testUnstakeCallsTransfer() public {
         (address from, address to, uint256 amount) = daoToken
-            .transferFromCalledWith();
+            .__transferFromCalledWith();
         assertEq(from, address(campaign));
         assertEq(to, staker);
         assertEq(amount, 333);
     }
 
     function testUnstakeBurnsMTokens() public {
-        (address _sender, address to, uint256 amount) = mToken.burnCalledWith();
+        (address _sender, address to, uint256 amount) = mToken
+            .__burnCalledWith();
         assertEq(_sender, mToken.owner());
         assertEq(to, staker);
         assertEq(amount, 333);
@@ -235,11 +238,78 @@ contract CantTakeOfficeTest is TestBase {
         campaign.takeOffice();
     }
 
-    function testCooldownNotEndedCantTakeOffice() public {
+    function testCooldownNotEndedCantTakeOffice(uint256 stake) public {
+        vm.assume(stake >= threshold);
+
         vm.prank(staker);
-        campaign.stake(threshold + 1);
+        campaign.stake(stake);
 
         vm.expectRevert("Molten: cooldown ongoing");
         campaign.takeOffice();
+    }
+
+    function testTresholdAndCooldownOkCanTakeOffice(
+        uint256 stake,
+        uint256 blockTimestamp
+    ) public {
+        vm.assume(stake >= threshold);
+
+        vm.prank(staker);
+        campaign.stake(stake);
+
+        vm.assume(blockTimestamp >= campaign.cooldownEnd());
+
+        vm.warp(blockTimestamp);
+        campaign.takeOffice();
+    }
+}
+
+contract TakeOfficeTest is TestBase {
+    address public staker = address(0x331);
+    address public staker2 = address(0x332);
+    MoltenElectionMock election;
+
+    function setUp() public override {
+        daoToken = new ERC20VotesMintableMock("DAO governance token", "GT");
+        election = new MoltenElectionMock(
+            address(daoToken),
+            threshold,
+            duration,
+            cooldownDuration
+        );
+        vm.prank(delegate);
+        mToken = new MTokenMock(
+            string.concat("Molten ", daoToken.name()),
+            string.concat("m", daoToken.symbol(), "-", delegateName),
+            address(this)
+        );
+        campaign = new MoltenCampaign(
+            delegate,
+            address(election),
+            address(mToken)
+        );
+        mToken.transferOwnership(address(campaign));
+
+        vm.prank(staker);
+        campaign.stake(threshold);
+        vm.warp(campaign.cooldownEnd());
+        campaign.takeOffice();
+    }
+
+    function testCantStake() public {
+        vm.prank(staker);
+        vm.expectRevert("Molten: in office");
+        campaign.stake(1);
+    }
+
+    function testCantUnstake() public {
+        vm.prank(staker);
+        vm.expectRevert("Molten: in office");
+        campaign.unstake();
+    }
+
+    function testEndsElection() public {
+        address from = election.__endCalledWith();
+        assertEq(from, address(campaign));
     }
 }

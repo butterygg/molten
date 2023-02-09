@@ -11,6 +11,7 @@ contract MoltenElection {
     uint256 public threshold;
     uint128 public duration;
     uint128 public cooldownDuration;
+    bool public ended = false;
 
     constructor(
         address daoTokenAddress,
@@ -31,8 +32,9 @@ contract MoltenElection {
         external
         returns (MoltenCampaign)
     {
+        require(!ended, "Molten: election ended");
         MToken mToken = new MToken(
-            string.concat("Molten ", daoToken.name()),
+            string.concat("Molten ", daoToken.name(), " by ", delegateName),
             string.concat("m", daoToken.symbol(), "-", delegateName),
             address(this)
         );
@@ -43,6 +45,23 @@ contract MoltenElection {
         );
         mToken.transferOwnership(address(campaign));
         return campaign;
+    }
+
+    // [XXX] This needs permission otherwise anyone can end the election. For
+    // this, it seems no other solutoin than storing in this contract the list
+    // of campaigns.
+    function end() public {
+        MoltenCampaign campaign = MoltenCampaign(msg.sender);
+        require(
+            campaign.totalStaked() >= threshold,
+            "Molten: threshold not reached"
+        );
+        require(
+            block.timestamp >= campaign.cooldownEnd(),
+            "Molten: cooldown not ended"
+        );
+
+        ended = true;
     }
 }
 
@@ -56,6 +75,7 @@ contract MoltenCampaign {
     uint256 public totalStaked;
     mapping(address => uint256) public staked;
     uint256 public cooldownEnd;
+    bool public inOffice;
 
     constructor(
         address _representative,
@@ -76,6 +96,8 @@ contract MoltenCampaign {
     }
 
     function stake(uint256 amount) public {
+        require(!inOffice, "Molten: in office");
+
         staked[msg.sender] += amount;
         totalStaked += amount;
 
@@ -86,6 +108,7 @@ contract MoltenCampaign {
 
     function unstake() public {
         uint256 _staked = staked[msg.sender];
+        require(!inOffice, "Molten: in office");
         require(_staked > 0, "Molten: unstake 0");
 
         staked[msg.sender] = 0;
@@ -102,5 +125,7 @@ contract MoltenCampaign {
             "Molten: threshold not reached"
         );
         require(block.timestamp >= cooldownEnd, "Molten: cooldown ongoing");
+
+        inOffice = true;
     }
 }

@@ -1,25 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 // solhint-disable no-empty-blocks
+// solhint-disable contract-name-camelcase
 pragma solidity ^0.8.17;
 
 import {ERC20, ERC20Pausable, Pausable} from "openzeppelin/token/ERC20/extensions/ERC20Pausable.sol";
 import {Owned} from "solmate/auth/Owned.sol";
 
 contract MTokenMock is ERC20Pausable, Owned {
-    bool public _mockFail = false;
+    bool public __mockFail = false;
 
-    struct MintCall {
+    struct __MintCall {
         address _sender;
         address to;
         uint256 amount;
     }
-    MintCall public mintCalledWith;
-    struct BurnCall {
+    __MintCall public __mintCalledWith;
+    struct __BurnCall {
         address _sender;
         address account;
         uint256 amount;
     }
-    BurnCall public burnCalledWith;
+    __BurnCall public __burnCalledWith;
 
     constructor(
         string memory name_,
@@ -36,32 +37,32 @@ contract MTokenMock is ERC20Pausable, Owned {
     }
 
     function mint(address to, uint256 amount) public virtual onlyOwner {
-        mintCalledWith = MintCall({
+        __mintCalledWith = __MintCall({
             _sender: msg.sender,
             to: to,
             amount: amount
         });
-        require(!_mockFail, "MTFM mint");
+        require(!__mockFail, "MTFM mint");
     }
 
     function burn(address account, uint256 amount) public virtual onlyOwner {
-        burnCalledWith = BurnCall({
+        __burnCalledWith = __BurnCall({
             _sender: msg.sender,
             account: account,
             amount: amount
         });
-        require(!_mockFail, "MTFM burn");
+        require(!__mockFail, "MTFM burn");
     }
 
     function totalSupply() public view override returns (uint256) {
         return super.totalSupply();
     }
 
-    function setFail() public {
-        _mockFail = true;
+    function __setFail() public {
+        __mockFail = true;
     }
 
-    function unsetFail() public {
-        _mockFail = false;
+    function __unsetFail() public {
+        __mockFail = false;
     }
 }
