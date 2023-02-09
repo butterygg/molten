@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 // solhint-disable no-empty-blocks
+// solhint-disable contract-name-camelcase
 pragma solidity ^0.8.17;
 
 import {ERC20} from "openzeppelin/token/ERC20/ERC20.sol";
@@ -26,14 +27,14 @@ contract ERC20VotesMintable is ERC20Votes {
 }
 
 contract ERC20VotesMintableMock is ERC20Votes {
-    bool public _mockFail = false;
+    bool public __mockFail = false;
 
-    struct TransferFromCall {
+    struct __TransferFromCall {
         address from;
         address to;
         uint256 amount;
     }
-    TransferFromCall public transferFromCalledWith;
+    __TransferFromCall public __transferFromCalledWith;
 
     constructor(string memory name, string memory symbol)
         ERC20(name, symbol)
@@ -49,20 +50,20 @@ contract ERC20VotesMintableMock is ERC20Votes {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        transferFromCalledWith = TransferFromCall({
+        __transferFromCalledWith = __TransferFromCall({
             from: from,
             to: to,
             amount: amount
         });
-        require(!_mockFail, "ERC20VMFM transferFrom");
+        require(!__mockFail, "ERC20VMFM transferFrom");
         return true;
     }
 
-    function setFail() public {
-        _mockFail = true;
+    function __setFail() public {
+        __mockFail = true;
     }
 
-    function unsetFail() public {
-        _mockFail = false;
+    function __unsetFail() public {
+        __mockFail = false;
     }
 }

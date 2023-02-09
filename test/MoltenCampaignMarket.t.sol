@@ -2,8 +2,9 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
 import {MoltenElection, MoltenCampaign} from "../src/MoltenCampaign.sol";
+import {ERC20VotesMintable} from "./helpers/ERC20VotesMintable.sol";
+import {MoltenCampaignMock} from "./helpers/MoltenCampaignMock.sol";
 
 contract CreationTest is Test {
     ERC20VotesMintable public daoToken;
@@ -56,6 +57,17 @@ contract CreationTest is Test {
 
         assertEq(election.cooldownDuration(), cooldownDuration);
     }
+
+    function testNotEnded() public {
+        MoltenElection election = new MoltenElection(
+            address(daoToken),
+            1,
+            1,
+            1
+        );
+
+        assertFalse(election.ended());
+    }
 }
 
 contract MakeCampaignTest is Test {
@@ -97,6 +109,71 @@ contract MakeCampaignTest is Test {
     function testMTokenName() public {
         MoltenCampaign campaign = election.makeCampaign("butter");
 
-        assertEq(campaign.mToken().name(), "mGT-butter");
+        assertEq(campaign.mToken().symbol(), "mGT-butter");
+    }
+}
+
+contract EndTest is Test {
+    ERC20VotesMintable public daoToken;
+    MoltenCampaignMock public campaign;
+
+    function setUp() public {
+        daoToken = new ERC20VotesMintable("DAO governance token", "GT");
+        campaign = new MoltenCampaignMock(
+            address(0xdeadbeef1),
+            address(0xdeadbeef2),
+            address(0xdeadbeef3)
+        );
+    }
+
+    function testRequiresThresholdReached(uint256 threshold) public {
+        vm.assume(threshold >= 1);
+        MoltenElection election = new MoltenElection(
+            address(daoToken),
+            threshold,
+            1,
+            1
+        );
+        campaign.__stubTotalStaked(0);
+
+        vm.prank(address(campaign));
+        vm.expectRevert("Molten: threshold not reached");
+        election.end();
+    }
+
+    function testRequiresCooldownEnded(
+        uint256 threshold,
+        uint128 cooldownDuration
+    ) public {
+        vm.assume(threshold >= 1);
+        MoltenElection election = new MoltenElection(
+            address(daoToken),
+            threshold,
+            1,
+            cooldownDuration
+        );
+        campaign.__stubTotalStaked(threshold);
+        campaign.__stubCooldownEnd(block.timestamp + 1);
+
+        vm.prank(address(campaign));
+        vm.expectRevert("Molten: cooldown not ended");
+        election.end();
+    }
+
+    function testSetsEnded(uint256 threshold, uint128 cooldownDuration) public {
+        vm.assume(threshold >= 1);
+        MoltenElection election = new MoltenElection(
+            address(daoToken),
+            threshold,
+            1,
+            cooldownDuration
+        );
+        campaign.__stubTotalStaked(threshold);
+        campaign.__stubCooldownEnd(block.timestamp - 1);
+
+        vm.prank(address(campaign));
+        election.end();
+
+        assertTrue(election.ended());
     }
 }
