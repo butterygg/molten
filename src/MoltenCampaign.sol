@@ -5,37 +5,91 @@ pragma solidity ^0.8.17;
 import {MToken} from "./MToken.sol";
 import {IERC20Votes} from "./interfaces/IERC20Votes.sol";
 
+// [FIXME] Write interfaces and use them.
+// [TODO] Events.
+
+contract MoltenElectionFactory {
+    function makeElection(
+        address campaignFactoryAddress,
+        address daoTokenAddress,
+        uint256 _threshold,
+        uint128 _duration,
+        uint128 _cooldownDuration
+    ) public returns (address) {
+        return
+            address(
+                new MoltenElection(
+                    campaignFactoryAddress,
+                    daoTokenAddress,
+                    _threshold,
+                    _duration,
+                    _cooldownDuration
+                )
+            );
+    }
+}
+
 contract MoltenElection {
+    address public campaignFactory; // ❓ use Owned?
     IERC20Votes public daoToken;
     // Threshold in daoToken-weis.
     uint256 public threshold;
     uint128 public duration;
     uint128 public cooldownDuration;
     bool public ended = false;
+    mapping(address => bool) public hasCampaign;
 
     constructor(
+        address campaignFactoryAddress,
         address daoTokenAddress,
         uint256 _threshold,
         uint128 _duration,
         uint128 _cooldownDuration
     ) {
+        campaignFactory = campaignFactoryAddress;
         daoToken = IERC20Votes(daoTokenAddress);
         threshold = _threshold;
         duration = _duration;
         cooldownDuration = _cooldownDuration;
     }
 
-    // 🎨 We could further dependency-inject by having a separate libs
-    // MTokenDeployer and MoltenCampaignDeployer which addresses are passed as
-    // argument of the constructor/function.
-    function makeCampaign(string calldata delegateName)
-        external
+    function addCampaign(MoltenCampaign campaign) public {
+        require(msg.sender == campaignFactory, "Molten: unauthorized");
+        require(!ended, "Molten: election ended");
+        require(campaign.election() == this, "Molten: different election");
+        hasCampaign[address(campaign)] = true;
+    }
+
+    function end() public {
+        require(hasCampaign[msg.sender], "Molten: unauthorized");
+        MoltenCampaign campaign = MoltenCampaign(msg.sender);
+        require(
+            campaign.totalStaked() >= threshold,
+            "Molten: threshold not reached"
+        ); // [XXX] test this
+        require(
+            block.timestamp >= campaign.cooldownEnd(),
+            "Molten: cooldown not ended"
+        );
+
+        ended = true;
+    }
+}
+
+contract MoltenCampaignFactory {
+    function makeCampaign(address electionAddress, string calldata delegateName)
+        public
         returns (MoltenCampaign)
     {
-        require(!ended, "Molten: election ended");
+        MoltenElection election = MoltenElection(electionAddress);
         MToken mToken = new MToken(
-            string.concat("Molten ", daoToken.name(), " by ", delegateName),
-            string.concat("m", daoToken.symbol(), "-", delegateName),
+            string.concat(
+                "Molten ",
+                election.daoToken().name(),
+                " by ",
+                delegateName
+            ),
+            string.concat("m", election.daoToken().symbol(), "-", delegateName),
             address(this)
         );
         MoltenCampaign campaign = new MoltenCampaign(
@@ -44,24 +98,8 @@ contract MoltenElection {
             address(mToken)
         );
         mToken.transferOwnership(address(campaign));
+        election.addCampaign(campaign);
         return campaign;
-    }
-
-    // [XXX] This needs permission otherwise anyone can end the election. For
-    // this, it seems no other solutoin than storing in this contract the list
-    // of campaigns.
-    function end() public {
-        MoltenCampaign campaign = MoltenCampaign(msg.sender);
-        require(
-            campaign.totalStaked() >= threshold,
-            "Molten: threshold not reached"
-        );
-        require(
-            block.timestamp >= campaign.cooldownEnd(),
-            "Molten: cooldown not ended"
-        );
-
-        ended = true;
     }
 }
 
@@ -127,5 +165,7 @@ contract MoltenCampaign {
         require(block.timestamp >= cooldownEnd, "Molten: cooldown ongoing");
 
         inOffice = true;
+
+        election.end();
     }
 }
