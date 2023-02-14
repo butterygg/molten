@@ -322,7 +322,7 @@ contract TakeOfficeTest is TestBase {
         mToken.transferOwnership(address(campaign));
     }
 
-    function testSetsInOffice(uint256 totalStaked, uint256 cooldownEnd) public {
+    function testSideEffects(uint256 totalStaked, uint256 cooldownEnd) public {
         vm.assume(totalStaked >= threshold);
         vm.assume(cooldownEnd <= block.timestamp);
         campaign.__stubStaked(staker, totalStaked);
@@ -331,21 +331,11 @@ contract TakeOfficeTest is TestBase {
 
         campaign.takeOffice();
 
+        // Sets inOffice
         assertTrue(campaign.inOffice());
-    }
-
-    function testEndsElection(uint256 totalStaked, uint256 cooldownEnd) public {
-        vm.assume(totalStaked >= threshold);
-        vm.assume(cooldownEnd <= block.timestamp);
-        campaign.__stubStaked(staker, totalStaked);
-        campaign.__stubTotalStaked(totalStaked);
-        campaign.__stubCooldownEnd(cooldownEnd);
-
-        campaign.takeOffice();
-
+        // Calls election.end()
         address from = election.__endCalledWith();
-        emit log_address(from);
-        emit log_address(address(campaign));
         assertEq(from, address(campaign));
+        // [XXX] Calls yieldManager.
     }
 }
