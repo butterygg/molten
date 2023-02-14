@@ -66,7 +66,7 @@ contract MoltenElection {
         require(
             campaign.totalStaked() >= threshold,
             "Molten: threshold not reached"
-        ); // [XXX] test this
+        );
         require(
             block.timestamp >= campaign.cooldownEnd(),
             "Molten: cooldown not ended"
@@ -113,7 +113,7 @@ contract MoltenCampaign {
     uint256 public totalStaked;
     mapping(address => uint256) public staked;
     uint256 public cooldownEnd;
-    bool public inOffice;
+    bool public inOffice; // [XXX] Replace with states and use modifiers
 
     constructor(
         address _representative,
